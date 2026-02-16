@@ -1,0 +1,28 @@
+-- db/procedures/02_system_status_report.sql
+--
+-- PROCÉDURE 2 (OBLIGATOIRE) : Générer un rapport de statut du système
+--
+-- Ce que vous devez faire ici :
+-- 1. USE urba_drain;
+-- 2. Changer le délimiteur : DELIMITER //
+-- 3. Créer une procédure sp_system_status_report (sans paramètres)
+--
+-- 4. Logique de la procédure :
+--    Retourner un rapport avec 3 sections (utiliser UNION ALL) :
+--
+--    Section SENSORS :
+--    SELECT 'SENSORS' AS category,
+--           COUNT(*) AS total,
+--           SUM(CASE WHEN status='ACTIVE' THEN 1 ELSE 0 END) AS active,
+--           SUM(CASE WHEN status='INACTIVE' THEN 1 ELSE 0 END) AS inactive,
+--           SUM(CASE WHEN status='MAINTENANCE' THEN 1 ELSE 0 END) AS maintenance
+--    FROM sensors
+--
+--    Section PUMPS : (même structure)
+--
+--    Section ALERTS : (compter seulement les alertes du jour)
+--    WHERE DATE(created_at) = CURDATE()
+--
+-- 5. Terminer avec END// et DELIMITER ;
+--
+-- Utilisation : CALL sp_system_status_report();

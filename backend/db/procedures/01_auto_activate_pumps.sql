@@ -1,0 +1,29 @@
+-- db/procedures/01_auto_activate_pumps.sql
+--
+-- PROCÉDURE 1 (OBLIGATOIRE) : Activer automatiquement les pompes selon le niveau d'eau
+--
+-- Ce que vous devez faire ici :
+-- 1. USE urba_drain;
+-- 2. Changer le délimiteur : DELIMITER //
+-- 3. Créer une procédure sp_auto_activate_pumps
+--    Paramètres :
+--    - IN p_location VARCHAR(255) : Zone géographique
+--    - IN p_threshold DECIMAL(10,2) : Seuil de déclenchement
+--
+-- 4. Logique de la procédure :
+--    - Déclarer une variable v_avg_level
+--    - Calculer le niveau moyen dans la zone :
+--      SELECT AVG(sr.value) FROM sensor_readings sr
+--      JOIN sensors s ON sr.sensor_id = s.id
+--      WHERE s.location = p_location AND s.type = 'LEVEL'
+--      AND sr.recorded_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+--
+--    - Si v_avg_level > p_threshold :
+--      UPDATE pumps SET status='ACTIVE', last_activated_at=NOW()
+--      WHERE location = p_location AND status='INACTIVE'
+--
+--    - Retourner un message avec SELECT CONCAT(...)
+--
+-- 5. Terminer avec END// et DELIMITER ;
+--
+-- Utilisation : CALL sp_auto_activate_pumps('Centre-Ville', 2.0);

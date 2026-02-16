@@ -1,0 +1,24 @@
+-- db/triggers/01_critical_level_alert.sql
+--
+-- TRIGGER 1 (OBLIGATOIRE) : Créer automatiquement une alerte si niveau critique
+--
+-- Ce que vous devez faire ici :
+-- 1. Utiliser USE urba_drain;
+-- 2. Changer le délimiteur : DELIMITER //
+-- 3. Créer un trigger trg_check_critical_level
+--    - Déclenché AFTER INSERT ON sensor_readings
+--    - FOR EACH ROW
+--
+-- 4. Logique du trigger :
+--    - Déclarer des variables : sensor_type et threshold_critical (ex: 2.5)
+--    - Récupérer le type du capteur depuis la table sensors
+--    - Si type='LEVEL' ET NEW.value > threshold_critical
+--    - Alors INSERT INTO alerts une nouvelle alerte avec :
+--      * sensor_id = NEW.sensor_id
+--      * alert_type = 'HIGH_LEVEL'
+--      * severity = 'CRITICAL'
+--      * message = concat du niveau détecté
+--      * threshold_value = seuil
+--      * current_value = NEW.value
+--
+-- 5. Terminer avec END// et DELIMITER ;

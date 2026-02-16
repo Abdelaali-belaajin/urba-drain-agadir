@@ -1,0 +1,20 @@
+-- db/triggers/02_update_last_reading.sql
+--
+-- TRIGGER 2 (OBLIGATOIRE) : Mettre à jour last_reading_at du capteur
+--
+-- Ce que vous devez faire ici :
+-- 1. USE urba_drain;
+-- 2. Changer le délimiteur : DELIMITER //
+-- 3. Créer un trigger trg_update_sensor_last_reading
+--    - Déclenché AFTER INSERT ON sensor_readings
+--    - FOR EACH ROW
+--
+-- 4. Logique du trigger :
+--    - UPDATE sensors
+--    - SET last_reading_at = NEW.recorded_at
+--    - WHERE id = NEW.sensor_id
+--
+-- Ce trigger met automatiquement à jour la date de dernière lecture
+-- dans la table sensors quand une nouvelle lecture est insérée
+--
+-- 5. Terminer avec END// et DELIMITER ;

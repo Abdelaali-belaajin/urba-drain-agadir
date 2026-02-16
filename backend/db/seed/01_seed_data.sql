@@ -1,0 +1,36 @@
+-- db/seed/01_seed_data.sql
+--
+-- Ce fichier insère des données de test dans la base
+--
+-- Ce que vous devez faire ici :
+-- 1. USE urba_drain;
+--
+-- 2. INSERT INTO sensors : Créer 4-5 capteurs avec :
+--    - Noms descriptifs (ex: Capteur Centre-Ville 1)
+--    - Types variés : LEVEL, FLOW, PRESSURE
+--    - Localisations d'Agadir : Centre-Ville, Talborjt, Port, Founty, Anza
+--    - Coordonnées GPS (latitude ~30.4, longitude ~-9.6)
+--    - Status : ACTIVE, INACTIVE, MAINTENANCE
+--
+-- 3. INSERT INTO pumps : Créer 4-5 pompes avec :
+--    - Noms (ex: Pompe Centre-Ville A)
+--    - Localisations correspondant aux capteurs
+--    - Capacités entre 150 et 300 m³/h
+--    - Status variés : ACTIVE, INACTIVE
+--
+-- 4. INSERT INTO sensor_readings : Créer 8-10 lectures avec :
+--    - sensor_id correspondant aux capteurs créés
+--    - Valeurs réalistes : 0.8 à 2.5 m pour LEVEL, 30-50 L/s pour FLOW
+--    - Unités : 'm', 'L/s', 'bar'
+--    - recorded_at : utiliser NOW() - INTERVAL X MINUTE
+--
+-- 5. INSERT INTO alerts : Créer 2-3 alertes avec :
+--    - Différents types : HIGH_LEVEL, SENSOR_ERROR
+--    - Severités : LOW, MEDIUM, HIGH, CRITICAL
+--    - Status : ACTIVE, ACKNOWLEDGED, RESOLVED
+--    - Messages descriptifs
+--
+-- 6. INSERT INTO pump_operations : Créer 2-3 opérations avec :
+--    - operation_type : START, STOP, MAINTENANCE
+--    - performed_by : 'system', 'admin', 'operator'
+--    - Notes explicatives
