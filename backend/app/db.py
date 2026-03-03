@@ -1,23 +1,32 @@
 # app/db.py
 #
-# Ce fichier gère la connexion à MySQL via PyMySQL (SANS ORM)
+# FICHIER OBSOLÈTE avec l'architecture ORM
 #
-# Ce que vous devez faire ici :
-# 1. Importer pymysql et DictCursor
-# 2. Importer Config depuis app.config
+# Ce fichier n'est plus nécessaire car SQLAlchemy gère la connexion.
+# L'objet db est maintenant défini dans app/extensions.py
 #
-# 3. Créer une fonction get_db_connection() qui :
-#    - Utilise pymysql.connect() pour se connecter
-#    - Paramètres : host, port, user, password, database depuis Config
-#    - Utilise cursorclass=DictCursor pour retourner des dictionnaires
-#    - autocommit=False pour gérer les transactions manuellement
-#    - Retourne la connexion
+# Si vous souhaitez garder ce fichier pour compatibilité :
+# - Vous pouvez créer des fonctions utilitaires pour des requêtes SQL brutes
+# - Utiliser db.session.execute() depuis extensions.py
 #
-# 4. Créer une fonction execute_query(query, params, fetch_one, fetch_all, commit) qui :
-#    - Crée une connexion
-#    - Exécute la requête SQL avec cursor.execute()
-#    - Si commit=True : commit() et retourner lastrowid ou rowcount
-#    - Si fetch_one=True : retourner fetchone()
-#    - Si fetch_all=True : retourner fetchall()
-#    - Gérer les erreurs avec try/except et rollback()
-#    - Toujours fermer la connexion dans finally
+# Exemple d'utilisation avec ORM :
+# from app.extensions import db
+# from app.models import Sensor
+# 
+# # Créer
+# sensor = Sensor(name='Capteur 1', type='LEVEL')
+# db.session.add(sensor)
+# db.session.commit()
+#
+# # Lire
+# sensors = Sensor.query.all()
+# sensor = Sensor.query.get(1)
+# sensors = Sensor.query.filter_by(status='ACTIVE').all()
+#
+# # Mettre à jour
+# sensor.status = 'INACTIVE'
+# db.session.commit()
+#
+# # Supprimer
+# db.session.delete(sensor)
+# db.session.commit()

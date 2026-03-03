@@ -35,19 +35,16 @@ mysql -u root -p
 
 ```sql
 -- 1. Créer les tables
-SOURCE db/schema/01_create_tables.sql;
+
 
 -- 2. Créer les triggers
-SOURCE db/triggers/01_critical_level_alert.sql;
-SOURCE db/triggers/02_update_last_reading.sql;
-SOURCE db/triggers/03_log_pump_operations.sql;
+
 
 -- 3. Créer les procédures
-SOURCE db/procedures/01_auto_activate_pumps.sql;
-SOURCE db/procedures/02_system_status_report.sql;
+
 
 -- 4. Insérer les données de test
-SOURCE db/seed/01_seed_data.sql;
+
 ```
 
 ### 3️⃣ Configuration Frontend
