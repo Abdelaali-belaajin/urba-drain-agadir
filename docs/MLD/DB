@@ -44,7 +44,7 @@ CREATE TABLE capteur (
     seuil_critique DECIMAL(5,2),
     derniere_lecture DECIMAL(5,2),
     date_installation DATE NOT NULL,
-    derniere_maintenance TIMESTAMP,
+    derniere_maintenance TIMESTAMP NULL DEFAULT NULL,
     date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     id_zone INT NOT NULL,
 
@@ -94,7 +94,7 @@ CREATE TABLE utilisateur (
     telephone VARCHAR(20),
     actif BOOLEAN DEFAULT TRUE,
     date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    derniere_connexion TIMESTAMP,
+    derniere_connexion TIMESTAMP NULL DEFAULT NULL,
 
     INDEX idx_utilisateur_nom (nom_utilisateur),
     INDEX idx_utilisateur_email (email),
@@ -116,9 +116,9 @@ CREATE TABLE pompe (
     statut ENUM('ACTIVE', 'INACTIVE', 'MAINTENANCE', 'PANNE') DEFAULT 'INACTIVE',
     mode_activation ENUM('MANUEL', 'AUTOMATIQUE', 'PLANIFIE') DEFAULT 'MANUEL',
     heures_fonctionnement INT DEFAULT 0 CHECK (heures_fonctionnement >= 0),
-    derniere_activation TIMESTAMP,
+    derniere_activation TIMESTAMP NULL DEFAULT NULL,
     date_installation DATE NOT NULL,
-    derniere_maintenance TIMESTAMP,
+    derniere_maintenance TIMESTAMP NULL DEFAULT NULL,
     date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     id_zone INT NOT NULL,
 
