@@ -1,7 +1,7 @@
 # app/services/capteur_service.py
 # Fonctions pour les capteurs
 
-from app.database import fetch_all, fetch_one
+from app.database import fetch_all, fetch_one, execute_query
 
 
 def get_all_capteurs(type_capteur=None, statut=None):
@@ -70,3 +70,34 @@ def get_capteurs_critiques():
     """
     capteurs = fetch_all(query)
     return capteurs
+
+
+def create_capteur(reference, type_capteur, localisation, id_zone, seuil_alerte, seuil_critique, date_installation):
+    # Créer un nouveau capteur
+    query = """
+        INSERT INTO capteur 
+        (reference, type_capteur, localisation, id_zone, seuil_alerte, seuil_critique, date_installation, statut)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, 'ACTIF')
+    """
+    execute_query(query, (reference, type_capteur, localisation, id_zone, seuil_alerte, seuil_critique, date_installation), commit=True)
+    
+    result = fetch_one("SELECT LAST_INSERT_ID() as id")
+    return result['id']
+
+
+def update_capteur(capteur_id, statut, seuil_alerte, seuil_critique, localisation):
+    # Modifier un capteur
+    query = """
+        UPDATE capteur 
+        SET statut = %s, seuil_alerte = %s, seuil_critique = %s, localisation = %s
+        WHERE id_capteur = %s
+    """
+    rows = execute_query(query, (statut, seuil_alerte, seuil_critique, localisation, capteur_id), commit=True)
+    return rows > 0
+
+
+def delete_capteur(capteur_id):
+    # Désactiver un capteur plutôt que le supprimer (soft delete)
+    query = "UPDATE capteur SET statut = 'INACTIF' WHERE id_capteur = %s"
+    rows = execute_query(query, (capteur_id,), commit=True)
+    return rows > 0
