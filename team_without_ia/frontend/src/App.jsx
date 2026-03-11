@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState } from 'react'
+import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import Sidebar from './components/layout/Sidebar'
 import Topbar from './components/layout/Topbar'
 import Dashboard from './pages/Dashboard'
@@ -11,6 +12,7 @@ import Alertes from './pages/Alertes'
 const ACTIVE_ALERT_COUNT = 4
 
 function AppLayout() {
+  const { sidebarCollapsed } = useTheme()
   const [refreshKey, setRefreshKey] = useState(0)
   const [loading, setLoading] = useState(false)
 
@@ -23,7 +25,7 @@ function AppLayout() {
   return (
     <div className="app-layout">
       <Sidebar alertCount={ACTIVE_ALERT_COUNT} />
-      <div className="main-content">
+      <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <Topbar onRefresh={handleRefresh} loading={loading} alertCount={ACTIVE_ALERT_COUNT} />
         <main className="page-content" key={refreshKey}>
           <Routes>
@@ -41,8 +43,10 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppLayout />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }

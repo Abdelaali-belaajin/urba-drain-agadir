@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { zonesAPI, capteursAPI, pompesAPI } from '../api'
 import StatCard from '../components/ui/StatCard'
 import {
@@ -7,10 +8,10 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts'
 import {
-  MapPin, Radio, Zap, AlertTriangle, Activity,
-  ArrowRight, CheckCircle, XCircle, Clock,
+  MapPin, Radio, Zap, AlertTriangle,
+  ArrowRight,
 } from 'lucide-react'
-import { risqueConfig, pompeStatutConfig, typeCapteurConfig, fmtDatetime } from '../utils/helpers'
+import { risqueConfig, pompeStatutConfig } from '../utils/helpers'
 
 const MOCK_READINGS = Array.from({ length: 12 }, (_, i) => ({
   time: `${String(i * 5).padStart(2, '0')}m`,
@@ -83,9 +84,14 @@ export default function Dashboard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-      {/* Critical alerts banner */}
       {critiques.length > 0 && (
-        <div className="alert-banner alert-banner-red fade-in" style={{ alignItems: 'center' }}>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="alert-banner alert-banner-red"
+          style={{ alignItems: 'center' }}
+        >
           <div className="live-dot live-dot-red" />
           <div style={{ flex: 1 }}>
             <strong style={{ color: 'var(--red)' }}>{critiques.length} capteur{critiques.length > 1 ? 's' : ''} en niveau critique</strong>
@@ -96,20 +102,43 @@ export default function Dashboard() {
           <Link to="/capteurs" className="btn btn-sm" style={{ background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid rgba(255,61,90,0.25)', textDecoration: 'none' }}>
             Voir capteurs <ArrowRight size={12} />
           </Link>
-        </div>
+        </motion.div>
       )}
 
-      {/* Stat cards */}
-      <div className="grid-4 fade-in">
-        <StatCard label="Zones surveillées" value={zones.length} sub={`${zonesRisque} zone${zonesRisque !== 1 ? 's' : ''} à risque élevé/critique`} icon={MapPin} color="var(--cyan)" loading={loading} />
-        <StatCard label="Capteurs actifs" value={capteursActifs} sub={`${capteursDefaillants} défaillant${capteursDefaillants !== 1 ? 's' : ''} • ${capteurs.length} total`} icon={Radio} color="var(--blue-bright)" loading={loading} />
-        <StatCard label="Pompes en service" value={pompesActives} sub={`${pompesPanne} en panne • ${pompes.length} total`} icon={Zap} color="var(--green)" loading={loading} />
-        <StatCard label="Alertes critiques" value={critiques.length} sub="Capteurs dépassant le seuil critique" icon={AlertTriangle} color={critiques.length > 0 ? 'var(--red)' : 'var(--green)'} loading={loading} />
-      </div>
+      <motion.div
+        className="grid-4"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.1
+            }
+          }
+        }}
+      >
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
+          <StatCard label="Zones surveillées" value={zones.length} sub={`${zonesRisque} zone${zonesRisque !== 1 ? 's' : ''} à risque élevé/critique`} icon={MapPin} color="var(--cyan)" loading={loading} />
+        </motion.div>
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
+          <StatCard label="Capteurs actifs" value={capteursActifs} sub={`${capteursDefaillants} défaillant${capteursDefaillants !== 1 ? 's' : ''} • ${capteurs.length} total`} icon={Radio} color="var(--blue-bright)" loading={loading} />
+        </motion.div>
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
+          <StatCard label="Pompes en service" value={pompesActives} sub={`${pompesPanne} en panne • ${pompes.length} total`} icon={Zap} color="var(--green)" loading={loading} />
+        </motion.div>
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
+          <StatCard label="Alertes critiques" value={critiques.length} sub="Capteurs dépassant le seuil critique" icon={AlertTriangle} color={critiques.length > 0 ? 'var(--red)' : 'var(--green)'} loading={loading} />
+        </motion.div>
+      </motion.div>
 
-      {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }} className="fade-in-2">
-        {/* Level chart */}
+      <motion.div
+        style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+      >
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
             <div>
@@ -150,7 +179,6 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Risk pie */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="section-title" style={{ marginBottom: 16 }}>Répartition risques</div>
           {!loading && riskData.length > 0 ? (
@@ -180,11 +208,14 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Bottom row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }} className="fade-in-3">
-        {/* Zones at risk */}
+      <motion.div
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+      >
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div className="section-title" style={{ marginBottom: 0 }}>Zones à surveiller</div>
@@ -198,16 +229,22 @@ export default function Dashboard() {
               : zones
                   .sort((a, b) => ['CRITIQUE','ELEVE','MOYEN','FAIBLE'].indexOf(a.niveau_risque) - ['CRITIQUE','ELEVE','MOYEN','FAIBLE'].indexOf(b.niveau_risque))
                   .slice(0, 5)
-                  .map(z => {
+                  .map((z, idx) => {
                     const cfg = risqueConfig[z.niveau_risque] || {}
                     return (
-                      <div key={z.id_zone} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '10px 12px',
-                        background: 'var(--bg-surface)',
-                        borderRadius: 8,
-                        border: '1px solid var(--border-subtle)',
-                      }}>
+                      <motion.div
+                        key={z.id_zone}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: idx * 0.05 }}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '10px 12px',
+                          background: 'var(--bg-surface)',
+                          borderRadius: 8,
+                          border: '1px solid var(--border-subtle)',
+                        }}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div className={`live-dot ${cfg.dot}`} />
                           <div>
@@ -218,14 +255,13 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <span className={`badge ${cfg.cls}`}>{cfg.label}</span>
-                      </div>
+                      </motion.div>
                     )
                   })
             }
           </div>
         </div>
 
-        {/* Pumps status */}
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div className="section-title" style={{ marginBottom: 0 }}>État des pompes</div>
@@ -236,16 +272,22 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {loading
               ? Array(4).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 44, borderRadius: 8 }} />)
-              : pompes.slice(0, 5).map(p => {
+              : pompes.slice(0, 5).map((p, idx) => {
                   const cfg = pompeStatutConfig[p.statut] || {}
                   return (
-                    <div key={p.id_pompe} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '10px 12px',
-                      background: 'var(--bg-surface)',
-                      borderRadius: 8,
-                      border: '1px solid var(--border-subtle)',
-                    }}>
+                    <motion.div
+                      key={p.id_pompe}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: idx * 0.05 }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        background: 'var(--bg-surface)',
+                        borderRadius: 8,
+                        border: '1px solid var(--border-subtle)',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {cfg.dot
                           ? <div className={`live-dot ${cfg.dot}`} />
@@ -259,13 +301,13 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <span className={`badge ${cfg.cls}`}>{cfg.label}</span>
-                    </div>
+                    </motion.div>
                   )
                 })
             }
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

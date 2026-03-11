@@ -130,11 +130,11 @@ export default function Alertes() {
                       <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>{a.message}</p>
 
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                        <span>📍 {a.nom_zone}</span>
-                        {a.id_capteur && <span>📡 Capteur #{a.id_capteur}</span>}
-                        {a.id_pompe && <span>⚡ Pompe #{a.id_pompe}</span>}
-                        <span>🕐 {fmtDatetime(a.timestamp_creation)}</span>
-                        {a.timestamp_resolution && <span>✅ Résolu: {fmtDatetime(a.timestamp_resolution)}</span>}
+                        <span>Zone: {a.nom_zone}</span>
+                        {a.id_capteur && <span>Capteur #{a.id_capteur}</span>}
+                        {a.id_pompe && <span>Pompe #{a.id_pompe}</span>}
+                        <span>{fmtDatetime(a.timestamp_creation)}</span>
+                        {a.timestamp_resolution && <span>Résolu: {fmtDatetime(a.timestamp_resolution)}</span>}
                       </div>
 
                       {a.utilisateur_acquittement && (
