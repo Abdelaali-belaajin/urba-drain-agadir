@@ -50,10 +50,12 @@ def register_blueprints(app):
     from app.routes.zones import bp as zones_bp
     from app.routes.capteurs import bp as capteurs_bp
     from app.routes.pompes import bp as pompes_bp
+    from app.routes.alertes import bp as alertes_bp
     
     app.register_blueprint(zones_bp, url_prefix='/api/zones')
     app.register_blueprint(capteurs_bp, url_prefix='/api/capteurs')
     app.register_blueprint(pompes_bp, url_prefix='/api/pompes')
+    app.register_blueprint(alertes_bp, url_prefix='/api/alertes')
 
 
 def register_error_handlers(app):

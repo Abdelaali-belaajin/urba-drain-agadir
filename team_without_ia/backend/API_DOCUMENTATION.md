@@ -2,7 +2,7 @@
 
 **Version** : 1.0  
 **Base URL** : `http://localhost:5000`  
-**Date** : 10 Mars 2026
+**Date** : 11 Mars 2026
 
 ---
 
@@ -13,8 +13,9 @@
 3. [Endpoints Zones](#endpoints-zones)
 4. [Endpoints Capteurs](#endpoints-capteurs)
 5. [Endpoints Pompes](#endpoints-pompes)
-6. [Codes d'Erreur](#codes-derreur)
-7. [Exemples d'Utilisation](#exemples-dutilisation)
+6. [Endpoints Alertes](#endpoints-alertes)
+7. [Codes d'Erreur](#codes-derreur)
+8. [Exemples d'Utilisation](#exemples-dutilisation)
 
 ---
 
@@ -726,6 +727,384 @@ Content-Type: application/json
 
 ---
 
+## Endpoints Alertes
+
+### 1. Liste toutes les alertes
+
+**GET** `/api/alertes`
+
+Récupère la liste de toutes les alertes avec possibilité de filtrage.
+
+**Query Parameters** (optionnels) :
+- `statut` (string) : Statut de l'alerte (ACTIVE, ACQUITTEE, RESOLUE, IGNOREE)
+- `severite` (string) : Niveau de sévérité (INFO, AVERTISSEMENT, CRITIQUE, URGENCE)
+- `zone` (integer) : ID de la zone
+- `type` (string) : Type d'alerte (NIVEAU_ELEVE, PANNE_CAPTEUR, PANNE_POMPE, MAINTENANCE)
+
+**Exemples** :
+```
+GET /api/alertes
+GET /api/alertes?statut=ACTIVE
+GET /api/alertes?severite=URGENCE
+GET /api/alertes?zone=2&statut=ACTIVE
+GET /api/alertes?type=PANNE_POMPE
+```
+
+**Réponse** :
+```json
+{
+  "success": true,
+  "count": 4,
+  "data": [
+    {
+      "id_alerte": 2,
+      "type_alerte": "NIVEAU_ELEVE",
+      "niveau_severite": "URGENCE",
+      "statut": "ACTIVE",
+      "titre": "Inondation imminente Hay Mohammadi",
+      "message": "Capteur CAP-NIV-003 : valeur 2.95m > seuil 3.00m",
+      "timestamp_creation": "2025-03-02 04:00:00",
+      "timestamp_acquittement": null,
+      "timestamp_resolution": null,
+      "utilisateur_acquittement": null,
+      "actions_prises": null,
+      "id_capteur": 4,
+      "id_pompe": 4,
+      "id_zone": 2,
+      "nom_zone": "Hay Mohammadi - Zone Commerciale",
+      "reference_capteur": "CAP-NIV-003",
+      "reference_pompe": "PMP-004"
+    }
+  ]
+}
+```
+
+---
+
+### 2. Détails d'une alerte
+
+**GET** `/api/alertes/{id}`
+
+Récupère les détails complets d'une alerte spécifique.
+
+**Exemple** :
+```
+GET /api/alertes/5
+```
+
+**Réponse** :
+```json
+{
+  "success": true,
+  "data": {
+    "id_alerte": 5,
+    "type_alerte": "MAINTENANCE",
+    "niveau_severite": "INFO",
+    "statut": "RESOLUE",
+    "titre": "Maintenance programmée PMP-003",
+    "message": "Maintenance préventive effectuée avec succès",
+    "timestamp_creation": "2025-02-28 07:00:00",
+    "timestamp_acquittement": "2025-02-28 07:30:00",
+    "timestamp_resolution": "2025-03-01 12:00:00",
+    "utilisateur_acquittement": "technicien1",
+    "actions_prises": "Remplacement joint hydraulique, vérification moteur, test OK",
+    "id_zone": 1,
+    "nom_zone": "Talborjt - Centre Historique",
+    "niveau_risque": "CRITIQUE",
+    "reference_pompe": "PMP-003",
+    "nom_pompe": "Pompe Secours Talborjt"
+  }
+}
+```
+
+**Erreur (404)** :
+```json
+{
+  "error": "Alerte introuvable"
+}
+```
+
+---
+
+### 3. Créer une alerte manuelle
+
+**POST** `/api/alertes`
+
+Crée une nouvelle alerte manuelle dans le système.
+
+**Headers** :
+```
+Content-Type: application/json
+```
+
+**Body** :
+```json
+{
+  "type_alerte": "MAINTENANCE",
+  "niveau_severite": "INFO",
+  "titre": "Maintenance préventive PMP-005 planifiée",
+  "message": "Maintenance programmée le 15 mars 2026 à 8h00",
+  "id_zone": 2,
+  "id_pompe": 5
+}
+```
+
+**Champs Requis** :
+- `type_alerte` (enum) : Type d'alerte
+- `niveau_severite` (enum) : Niveau de sévérité
+- `titre` (string) : Titre de l'alerte
+- `message` (string) : Message descriptif
+- `id_zone` (integer) : ID de la zone concernée
+
+**Champs Optionnels** :
+- `id_capteur` (integer) : ID du capteur concerné
+- `id_pompe` (integer) : ID de la pompe concernée
+
+**Valeurs valides pour `type_alerte`** :
+- `NIVEAU_ELEVE` : Niveau d'eau élevé
+- `PANNE_CAPTEUR` : Capteur défaillant
+- `PANNE_POMPE` : Pompe en panne
+- `MAINTENANCE` : Maintenance planifiée
+
+**Valeurs valides pour `niveau_severite`** :
+- `INFO` : Information, pas urgent
+- `AVERTISSEMENT` : Surveiller de près
+- `CRITIQUE` : Action requise rapidement
+- `URGENCE` : Action immédiate nécessaire
+
+**Réponse (201 Created)** :
+```json
+{
+  "success": true,
+  "message": "Alerte created successfully",
+  "id_alerte": 11
+}
+```
+
+**Erreur (400)** - Type invalide :
+```json
+{
+  "error": "Invalid type_alerte"
+}
+```
+
+---
+
+### 4. Acquitter une alerte
+
+**PUT** `/api/alertes/{id}/acquitter`
+
+Acquitte une alerte (l'opérateur prend en charge le problème).
+
+**⚠️ Prérequis** : L'alerte doit avoir le statut `ACTIVE`.
+
+**Headers** :
+```
+Content-Type: application/json
+```
+
+**Body** :
+```json
+{
+  "utilisateur": "operateur1"
+}
+```
+
+**Ce qui se passe** :
+1. Statut de l'alerte → `ACQUITTEE`
+2. `timestamp_acquittement` → timestamp actuel
+3. `utilisateur_acquittement` → nom de l'opérateur
+
+**Réponse (200 OK)** :
+```json
+{
+  "success": true,
+  "message": "Alerte acquittée par operateur1"
+}
+```
+
+**Erreur (400)** - Statut invalide :
+```json
+{
+  "error": "Cannot acquit alert with status RESOLUE"
+}
+```
+
+---
+
+### 5. Résoudre une alerte
+
+**PUT** `/api/alertes/{id}/resoudre`
+
+Résout une alerte en enregistrant les actions effectuées.
+
+**⚠️ Prérequis** : L'alerte doit avoir le statut `ACTIVE` ou `ACQUITTEE`.
+
+**Headers** :
+```
+Content-Type: application/json
+```
+
+**Body** :
+```json
+{
+  "utilisateur": "operateur1",
+  "actions_prises": "Activation pompes P4 et P5. Niveau redescendu à 1.8m. Surveillance maintenue 2h."
+}
+```
+
+**Champs Requis** :
+- `utilisateur` (string) : Nom de l'utilisateur
+- `actions_prises` (string) : Description des actions effectuées
+
+**Ce qui se passe** :
+1. Statut de l'alerte → `RESOLUE`
+2. `timestamp_resolution` → timestamp actuel
+3. `actions_prises` → enregistré
+4. Si pas encore acquittée, acquittement automatique
+
+**Réponse (200 OK)** :
+```json
+{
+  "success": true,
+  "message": "Alerte résolue"
+}
+```
+
+**Erreur (400)** - Statut invalide :
+```json
+{
+  "error": "Cannot resolve alert with status IGNOREE"
+}
+```
+
+---
+
+### 6. Ignorer une alerte
+
+**PUT** `/api/alertes/{id}/ignorer`
+
+Ignore une alerte (fausse alerte ou non pertinente).
+
+**Headers** :
+```
+Content-Type: application/json
+```
+
+**Body** :
+```json
+{
+  "utilisateur": "operateur2",
+  "raison": "Fausse alerte - capteur mal calibré"
+}
+```
+
+**Champs Requis** :
+- `utilisateur` (string) : Nom de l'utilisateur
+- `raison` (string) : Raison de l'ignorance
+
+**Ce qui se passe** :
+1. Statut de l'alerte → `IGNOREE`
+2. `timestamp_resolution` → timestamp actuel
+3. `actions_prises` → raison enregistrée
+
+**Réponse (200 OK)** :
+```json
+{
+  "success": true,
+  "message": "Alerte ignorée"
+}
+```
+
+---
+
+### 7. Alertes actives
+
+**GET** `/api/alertes/actives`
+
+Raccourci pour récupérer uniquement les alertes actives (non traitées).
+
+Équivaut à : `GET /api/alertes?statut=ACTIVE`
+
+**Réponse** :
+```json
+{
+  "success": true,
+  "count": 4,
+  "data": [ ... ]
+}
+```
+
+---
+
+### 8. Alertes critiques
+
+**GET** `/api/alertes/critiques`
+
+Récupère les alertes actives de niveau `CRITIQUE` ou `URGENCE`, triées par priorité.
+
+**Réponse** :
+```json
+{
+  "success": true,
+  "count": 2,
+  "data": [
+    {
+      "id_alerte": 2,
+      "type_alerte": "NIVEAU_ELEVE",
+      "niveau_severite": "URGENCE",
+      "statut": "ACTIVE",
+      "titre": "Inondation imminente Hay Mohammadi",
+      "message": "Capteur CAP-NIV-003 : valeur 2.95m > seuil 3.00m",
+      "timestamp_creation": "2025-03-02 04:00:00",
+      "id_zone": 2,
+      "nom_zone": "Hay Mohammadi - Zone Commerciale",
+      "reference_capteur": "CAP-NIV-003",
+      "reference_pompe": "PMP-004"
+    }
+  ]
+}
+```
+
+---
+
+### 9. Statistiques des alertes
+
+**GET** `/api/alertes/stats`
+
+Récupère les statistiques globales des alertes.
+
+**Réponse** :
+```json
+{
+  "success": true,
+  "data": {
+    "par_statut": [
+      { "statut": "ACTIVE", "count": 4 },
+      { "statut": "RESOLUE", "count": 2 },
+      { "statut": "ACQUITTEE", "count": 1 }
+    ],
+    "par_severite": [
+      { "niveau_severite": "URGENCE", "count": 1 },
+      { "niveau_severite": "CRITIQUE", "count": 2 },
+      { "niveau_severite": "AVERTISSEMENT", "count": 1 }
+    ],
+    "par_zone": [
+      { "nom_zone": "Hay Mohammadi - Zone Commerciale", "count": 2 },
+      { "nom_zone": "Founty - Front de Mer", "count": 1 }
+    ],
+    "total_aujourdhui": 3
+  }
+}
+```
+
+**Utilisation** :
+- Dashboard : afficher les compteurs d'alertes
+- Graphiques : visualiser la répartition
+- Monitoring : suivre l'évolution
+
+---
+
 ## Codes d'Erreur
 
 ### Codes HTTP
@@ -843,6 +1222,75 @@ fetch('http://localhost:5000/api/pompes/1/activer', {
   .then(response => response.json())
   .then(data => {
     console.log(data.message);
+  });
+```
+
+#### GET - Alertes actives critiques
+```javascript
+fetch('http://localhost:5000/api/alertes/critiques')
+  .then(response => response.json())
+  .then(data => {
+    console.log(`${data.count} alertes critiques actives`);
+    data.data.forEach(alerte => {
+      console.log(`[${alerte.niveau_severite}] ${alerte.titre}`);
+    });
+  });
+```
+
+#### POST - Créer une alerte
+```javascript
+fetch('http://localhost:5000/api/alertes', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    type_alerte: "MAINTENANCE",
+    niveau_severite: "INFO",
+    titre: "Maintenance préventive planifiée",
+    message: "Intervention programmée le 15 mars",
+    id_zone: 2,
+    id_pompe: 5
+  })
+})
+  .then(response => response.json())
+  .then(data => {
+    console.log('Alerte créée:', data.id_alerte);
+  });
+```
+
+#### PUT - Acquitter une alerte
+```javascript
+fetch('http://localhost:5000/api/alertes/2/acquitter', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    utilisateur: "operateur1"
+  })
+})
+  .then(response => response.json())
+  .then(data => {
+    console.log(data.message); // "Alerte acquittée par operateur1"
+  });
+```
+
+#### PUT - Résoudre une alerte
+```javascript
+fetch('http://localhost:5000/api/alertes/2/resoudre', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    utilisateur: "operateur1",
+    actions_prises: "Pompes activées. Niveau normalisé après 2h."
+  })
+})
+  .then(response => response.json())
+  .then(data => {
+    console.log(data.message); // "Alerte résolue"
   });
 ```
 
