@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom'
-import { Bell, RefreshCw } from 'lucide-react'
+import { Bell, RefreshCw, Menu, Sun, Moon } from 'lucide-react'
+import { useTheme } from '../../contexts/ThemeContext'
 
 const pageTitles = {
   '/':          { title: 'Dashboard',       sub: 'Vue générale du système' },
@@ -11,6 +12,7 @@ const pageTitles = {
 
 export default function Topbar({ onRefresh, loading = false, alertCount = 0 }) {
   const location = useLocation()
+  const { theme, toggleTheme, toggleSidebar } = useTheme()
   const page = pageTitles[location.pathname] || { title: 'Page', sub: '' }
 
   return (
@@ -24,17 +26,26 @@ export default function Topbar({ onRefresh, loading = false, alertCount = 0 }) {
       padding: '0 32px',
       flexShrink: 0,
     }}>
-      <div>
-        <h1 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-          {page.title}
-        </h1>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 1 }}>
-          {page.sub}
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <button
+          className="btn btn-outline btn-icon"
+          onClick={toggleSidebar}
+          title="Toggle Sidebar"
+          style={{ borderColor: 'var(--border-subtle)' }}
+        >
+          <Menu size={16} />
+        </button>
+        <div>
+          <h1 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+            {page.title}
+          </h1>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 1 }}>
+            {page.sub}
+          </p>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Clock */}
         <div style={{
           padding: '5px 12px',
           background: 'var(--bg-card)',
@@ -47,7 +58,15 @@ export default function Topbar({ onRefresh, loading = false, alertCount = 0 }) {
           {new Date().toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
         </div>
 
-        {/* Refresh */}
+        <button
+          className="btn btn-outline btn-icon"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+          style={{ borderColor: 'var(--border-subtle)' }}
+        >
+          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+        </button>
+
         <button
           className="btn btn-outline btn-icon"
           onClick={onRefresh}
@@ -58,7 +77,6 @@ export default function Topbar({ onRefresh, loading = false, alertCount = 0 }) {
           <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
         </button>
 
-        {/* Alerts bell */}
         <div style={{ position: 'relative' }}>
           <button
             className="btn btn-outline btn-icon"
@@ -85,7 +103,6 @@ export default function Topbar({ onRefresh, loading = false, alertCount = 0 }) {
           )}
         </div>
 
-        {/* User */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '5px 12px',

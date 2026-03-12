@@ -3,3 +3,4 @@
 from . import zone_service
 from . import capteur_service
 from . import pompe_service
+from . import alerte_service

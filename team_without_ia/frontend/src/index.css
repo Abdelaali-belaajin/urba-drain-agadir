@@ -4,7 +4,7 @@
   padding: 0;
 }
 
-:root {
+:root, [data-theme="dark"] {
   /* Core palette - dark industrial water theme */
   --bg-base: #050c14;
   --bg-surface: #0a1628;
@@ -46,6 +46,7 @@
 
   /* Spacing */
   --sidebar-w: 240px;
+  --sidebar-w-collapsed: 60px;
   --topbar-h: 64px;
 
   /* Radius */
@@ -53,6 +54,43 @@
   --r-md: 8px;
   --r-lg: 12px;
   --r-xl: 16px;
+}
+
+[data-theme="light"] {
+  /* Core palette - light clean theme */
+  --bg-base: #f5f8fa;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafb;
+  --bg-elevated: #fafbfc;
+
+  /* Borders */
+  --border-subtle: rgba(0, 120, 180, 0.08);
+  --border-dim: rgba(0, 120, 180, 0.15);
+  --border-active: rgba(0, 120, 180, 0.35);
+
+  /* Brand & accent */
+  --cyan: #0088cc;
+  --cyan-dim: rgba(0, 136, 204, 0.1);
+  --cyan-glow: rgba(0, 136, 204, 0.2);
+  --blue: #0a6ebd;
+  --blue-bright: #1a8fe0;
+
+  /* Status colors */
+  --green: #00b876;
+  --green-dim: rgba(0, 184, 118, 0.1);
+  --yellow: #d9a000;
+  --yellow-dim: rgba(217, 160, 0, 0.1);
+  --orange: #e67300;
+  --orange-dim: rgba(230, 115, 0, 0.1);
+  --red: #e02444;
+  --red-dim: rgba(224, 36, 68, 0.1);
+
+  /* Text */
+  --text-primary: #1a2632;
+  --text-secondary: #4a5f75;
+  --text-muted: #7891a8;
+  --text-inverse: #ffffff;
 }
 
 html, body, #root {
@@ -63,6 +101,7 @@ html, body, #root {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Scrollbar */
@@ -122,6 +161,11 @@ html, body, #root {
   flex-direction: column;
   overflow: hidden;
   margin-left: var(--sidebar-w);
+  transition: margin-left 0.3s ease;
+}
+
+.main-content.sidebar-collapsed {
+  margin-left: var(--sidebar-w-collapsed);
 }
 
 .page-content {

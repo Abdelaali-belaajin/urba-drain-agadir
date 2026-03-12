@@ -108,12 +108,12 @@ CREATE TABLE `alerte` (
 --
 
 INSERT INTO `alerte` (`id_alerte`, `type_alerte`, `niveau_severite`, `statut`, `titre`, `message`, `timestamp_creation`, `timestamp_acquittement`, `timestamp_resolution`, `utilisateur_acquittement`, `actions_prises`, `id_capteur`, `id_pompe`, `id_zone`) VALUES
-(1, 'NIVEAU_ELEVE', 'CRITIQUE', 'ACTIVE', 'Niveau critique Zone Centre', 'Capteur CAP-NIV-007 : valeur 2.60m > seuil 2.50m', '2025-03-02 05:30:00', NULL, NULL, NULL, NULL, 11, 9, 5),
-(2, 'NIVEAU_ELEVE', 'URGENCE', 'ACTIVE', 'Inondation imminente Zone Sud', 'Capteur CAP-NIV-003 : valeur 2.95m > seuil 3.00m', '2025-03-02 04:00:00', NULL, NULL, NULL, NULL, 4, 4, 2),
+(1, 'NIVEAU_ELEVE', 'CRITIQUE', 'ACTIVE', 'Niveau critique Founty', 'Capteur CAP-NIV-007 : valeur 2.60m > seuil 2.50m', '2025-03-02 05:30:00', NULL, NULL, NULL, NULL, 11, 9, 5),
+(2, 'NIVEAU_ELEVE', 'URGENCE', 'ACTIVE', 'Inondation imminente Hay Mohammadi', 'Capteur CAP-NIV-003 : valeur 2.95m > seuil 3.00m', '2025-03-02 04:00:00', NULL, NULL, NULL, NULL, 4, 4, 2),
 (3, 'PANNE_CAPTEUR', 'AVERTISSEMENT', 'ACTIVE', 'Capteur CAP-NIV-004 défaillant', 'Capteur hors ligne depuis 18 jours', '2025-02-13 09:00:00', NULL, NULL, NULL, NULL, 5, NULL, 2),
 (4, 'PANNE_POMPE', 'CRITIQUE', 'ACTIVE', 'Pompe PMP-010 en panne', 'Défaillance moteur détectée, pompe arrêtée', '2025-02-15 11:30:00', NULL, NULL, NULL, NULL, NULL, 10, 5),
 (5, 'MAINTENANCE', 'INFO', 'RESOLUE', 'Maintenance programmée PMP-003', 'Maintenance préventive effectuée avec succès', '2025-02-28 07:00:00', '2025-02-28 07:30:00', '2025-03-01 12:00:00', 'technicien1', 'Remplacement joint hydraulique, vérification moteur, test OK', NULL, 3, 1),
-(6, 'NIVEAU_ELEVE', 'AVERTISSEMENT', 'RESOLUE', 'Niveau élevé Zone Nord après pluies', 'Niveau remonté à 3.80m, pompes activées', '2025-02-20 18:00:00', '2025-02-20 18:15:00', '2025-02-21 06:00:00', 'operateur1', 'Activation pompes P1 et P2, surveillance renforcée 6h', 1, 1, 1),
+(6, 'NIVEAU_ELEVE', 'AVERTISSEMENT', 'RESOLUE', 'Niveau élevé Talborjt après pluies', 'Niveau remonté à 3.80m, pompes activées', '2025-02-20 18:00:00', '2025-02-20 18:15:00', '2025-02-21 06:00:00', 'operateur1', 'Activation pompes P1 et P2, surveillance renforcée 6h', 1, 1, 1),
 (7, 'PANNE_POMPE', 'AVERTISSEMENT', 'ACQUITTEE', 'Pompe PMP-007 en mode secours', 'Pompe planifiée non démarrée à l heure prévue', '2025-02-25 19:30:00', '2025-02-25 20:00:00', NULL, 'operateur2', NULL, NULL, 7, 3),
 (8, 'MAINTENANCE', 'INFO', 'ACTIVE', 'Maintenance capteur CAP-DEB-002', 'Capteur en maintenance, données indisponibles', '2025-03-01 08:00:00', NULL, NULL, NULL, NULL, 8, NULL, 3),
 (9, 'NIVEAU_ELEVE', 'CRITIQUE', 'ACTIVE', 'Niveau critique détecté - Capteur 11', 'Valeur mesurée: 2.55 > Seuil: 2.50', '2026-03-04 22:24:34', NULL, NULL, NULL, NULL, 11, NULL, 5),
@@ -147,21 +147,21 @@ CREATE TABLE `capteur` (
 --
 
 INSERT INTO `capteur` (`id_capteur`, `reference`, `type_capteur`, `localisation`, `latitude`, `longitude`, `statut`, `seuil_alerte`, `seuil_critique`, `derniere_lecture`, `date_installation`, `derniere_maintenance`, `date_creation`, `id_zone`) VALUES
-(1, 'CAP-NIV-001', 'NIVEAU', 'Collecteur principal Nord, rue Ibn Batouta', 30.42750000, -9.59780000, 'ACTIF', 2.50, 4.00, 2.70, '2023-01-15', '2024-12-01 07:00:00', '2026-03-04 22:24:34', 1),
-(2, 'CAP-NIV-002', 'NIVEAU', 'Bassin rétention Nord-Est', 30.42800000, -9.59700000, 'ACTIF', 2.50, 4.00, 1.72, '2023-01-15', '2024-11-15 08:00:00', '2026-03-04 22:24:34', 1),
-(3, 'CAP-DEB-001', 'DEBIT', 'Sortie collecteur Nord vers station', 30.42600000, -9.59900000, 'ACTIF', 8.00, 12.00, 10.80, '2023-02-10', '2024-10-20 09:00:00', '2026-03-04 22:24:34', 1),
-(4, 'CAP-NIV-003', 'NIVEAU', 'Collecteur Centre-Ville, Avenue Mohammed V', 30.41300000, -9.60050000, 'ACTIF', 1.80, 3.00, 2.95, '2022-06-20', '2025-01-10 07:30:00', '2026-03-04 22:24:34', 2),
-(5, 'CAP-NIV-004', 'NIVEAU', 'Réseau souterrain marché central', 30.41250000, -9.60100000, 'DEFAILLANT', 1.80, 3.00, NULL, '2022-06-20', '2024-08-05 13:00:00', '2026-03-04 22:24:34', 2),
-(6, 'CAP-PRE-001', 'PRESSION', 'Jonction principale Zone Sud', 30.41350000, -9.60000000, 'ACTIF', 5.00, 8.00, 5.30, '2022-07-01', '2025-02-01 08:00:00', '2026-03-04 22:24:34', 2),
-(7, 'CAP-NIV-005', 'NIVEAU', 'Quartier résidentiel Est, Hay Mohammadi', 30.43500000, -9.58200000, 'ACTIF', 2.00, 3.50, 1.18, '2023-05-12', '2024-09-15 10:00:00', '2026-03-04 22:24:34', 3),
-(8, 'CAP-DEB-002', 'DEBIT', 'Canal irrigation Est', 30.43600000, -9.58100000, 'MAINTENANCE', 7.00, 11.00, NULL, '2023-05-12', '2025-03-01 08:00:00', '2026-03-04 22:24:34', 3),
-(9, 'CAP-NIV-006', 'NIVEAU', 'Zone portuaire, quai principal', 30.40150000, -9.61300000, 'ACTIF', 3.00, 5.00, 2.20, '2021-11-20', '2024-07-10 09:00:00', '2026-03-04 22:24:34', 4),
-(10, 'CAP-PRE-002', 'PRESSION', 'Conduite principale port', 30.40100000, -9.61400000, 'ACTIF', 6.00, 9.00, NULL, '2021-11-20', '2024-07-10 13:00:00', '2026-03-04 22:24:34', 4),
-(11, 'CAP-NIV-007', 'NIVEAU', 'Galerie commerciale centre, sous-sol niveau -2', 30.42010000, -9.59480000, 'ACTIF', 1.50, 2.50, 2.60, '2023-09-01', '2025-01-20 08:00:00', '2026-03-04 22:24:34', 5),
-(12, 'CAP-NIV-008', 'NIVEAU', 'Souk central, collecteur EST', 30.42050000, -9.59450000, 'ACTIF', 1.50, 2.50, 1.35, '2023-09-01', '2025-01-20 09:00:00', '2026-03-04 22:24:34', 5),
-(13, 'CAP-DEB-003', 'DEBIT', 'Exutoire périphérique Nord-Est', 30.45700000, -9.57100000, 'ACTIF', 5.00, 9.00, 4.20, '2024-01-08', NULL, '2026-03-04 22:24:34', 6),
-(14, 'CAP-NIV-009', 'NIVEAU', 'Plage Taghazout, collecteur pluvial', 30.39900000, -9.62400000, 'ACTIF', 1.20, 2.00, 0.90, '2022-03-15', '2024-06-01 07:00:00', '2026-03-04 22:24:34', 7),
-(15, 'CAP-NIV-010', 'NIVEAU', 'Collecteur zone industrielle Sud, sortie A', 30.40250000, -9.60980000, 'ACTIF', 2.80, 4.50, 2.30, '2022-09-10', '2024-11-01 08:00:00', '2026-03-04 22:24:34', 8);
+(1, 'CAP-NIV-001', 'NIVEAU', 'Collecteur principal Talborjt, Avenue Hassan II', 30.42112300, -9.59834500, 'ACTIF', 2.50, 4.00, 2.85, '2023-01-15', '2024-12-01 07:00:00', '2026-03-04 22:24:34', 1),
+(2, 'CAP-NIV-002', 'NIVEAU', 'Bassin rétention Talborjt, Place Assalam', 30.42045600, -9.59912300, 'ACTIF', 2.50, 4.00, 1.92, '2023-01-15', '2024-11-15 08:00:00', '2026-03-04 22:24:34', 1),
+(3, 'CAP-DEB-001', 'DEBIT', 'Sortie collecteur Talborjt vers Oued Tildi', 30.42156700, -9.59756700, 'ACTIF', 8.00, 12.00, 11.20, '2023-02-10', '2024-10-20 09:00:00', '2026-03-04 22:24:34', 1),
+(4, 'CAP-NIV-003', 'NIVEAU', 'Hay Mohammadi, Boulevard Mohammed V', 30.41289000, -9.60078900, 'ACTIF', 1.80, 3.00, 3.15, '2022-06-20', '2025-01-10 07:30:00', '2026-03-04 22:24:34', 2),
+(5, 'CAP-NIV-004', 'NIVEAU', 'Souk El Had, réseau souterrain principal', 30.41178900, -9.60145600, 'DEFAILLANT', 1.80, 3.00, NULL, '2022-06-20', '2024-08-05 13:00:00', '2026-03-04 22:24:34', 2),
+(6, 'CAP-PRE-001', 'PRESSION', 'Station pompage Hay Mohammadi, rue Atlas', 30.41323400, -9.60034500, 'ACTIF', 5.00, 8.00, 5.65, '2022-07-01', '2025-02-01 08:00:00', '2026-03-04 22:24:34', 2),
+(7, 'CAP-NIV-005', 'NIVEAU', 'Anza, Avenue Prince Moulay Abdellah', 30.38812300, -9.56189000, 'ACTIF', 2.00, 3.50, 1.35, '2023-05-12', '2024-09-15 10:00:00', '2026-03-04 22:24:34', 3),
+(8, 'CAP-DEB-002', 'DEBIT', 'Canal irrigation Anza Nord', 30.38934500, -9.56123400, 'MAINTENANCE', 7.00, 11.00, NULL, '2023-05-12', '2025-03-01 08:00:00', '2026-03-04 22:24:34', 3),
+(9, 'CAP-NIV-006', 'NIVEAU', 'Port d\'Agadir, quai de pêche principal', 30.41523400, -9.61734500, 'ACTIF', 3.00, 5.00, 2.45, '2021-11-20', '2024-07-10 09:00:00', '2026-03-04 22:24:34', 4),
+(10, 'CAP-PRE-002', 'PRESSION', 'Port commercial, conduite principale', 30.41478900, -9.61823400, 'ACTIF', 6.00, 9.00, NULL, '2021-11-20', '2024-07-10 13:00:00', '2026-03-04 22:24:34', 4),
+(11, 'CAP-NIV-007', 'NIVEAU', 'Founty, promenade de la plage', 30.39167800, -9.60412300, 'ACTIF', 1.50, 2.50, 2.75, '2023-09-01', '2025-01-20 08:00:00', '2026-03-04 22:24:34', 5),
+(12, 'CAP-NIV-008', 'NIVEAU', 'Founty Marina, parking sous-sol', 30.39223400, -9.60378900, 'ACTIF', 1.50, 2.50, 1.48, '2023-09-01', '2025-01-20 09:00:00', '2026-03-04 22:24:34', 5),
+(13, 'CAP-DEB-003', 'DEBIT', 'Tilila, exutoire principal Oued Souss', 30.43512300, -9.58089000, 'ACTIF', 5.00, 9.00, 4.55, '2024-01-08', NULL, '2026-03-04 22:24:34', 6),
+(14, 'CAP-NIV-009', 'NIVEAU', 'Zone industrielle Tassila, collecteur usines', 30.35723400, -9.54523400, 'ACTIF', 1.20, 2.00, 1.05, '2022-03-15', '2024-06-01 07:00:00', '2026-03-04 22:24:34', 7),
+(15, 'CAP-NIV-010', 'NIVEAU', 'Dcheira El Jihadia, Avenue Al Qods', 30.37934500, -9.56745600, 'ACTIF', 2.80, 4.50, 2.65, '2022-09-10', '2024-11-01 08:00:00', '2026-03-04 22:24:34', 8);
 
 -- --------------------------------------------------------
 
@@ -279,17 +279,17 @@ CREATE TABLE `operation_pompe` (
 --
 
 INSERT INTO `operation_pompe` (`id_operation`, `type_operation`, `timestamp`, `declencheur`, `utilisateur`, `ancien_statut`, `nouveau_statut`, `remarques`, `id_pompe`, `id_alerte`) VALUES
-(1, 'ACTIVATION', '2025-02-20 18:20:00', 'ALERTE', 'operateur1', 'INACTIVE', 'ACTIVE', 'Activation suite alerte inondation Zone Nord', 1, 6),
-(2, 'DESACTIVATION', '2025-02-21 06:05:00', 'MANUEL', 'operateur1', 'ACTIVE', 'INACTIVE', 'Niveau revenu à la normale', 1, 6),
-(3, 'ACTIVATION', '2025-02-20 18:25:00', 'ALERTE', 'operateur1', 'INACTIVE', 'ACTIVE', 'Renfort PMP-002 sur alerte Nord', 2, 6),
-(4, 'DESACTIVATION', '2025-02-21 06:10:00', 'MANUEL', 'operateur1', 'ACTIVE', 'INACTIVE', 'Fin alerte Zone Nord', 2, 6),
+(1, 'ACTIVATION', '2025-02-20 18:20:00', 'ALERTE', 'operateur1', 'INACTIVE', 'ACTIVE', 'Activation suite alerte inondation Talborjt', 1, 6),
+(2, 'DESACTIVATION', '2025-02-21 06:05:00', 'MANUEL', 'operateur1', 'ACTIVE', 'INACTIVE', 'Niveau revenu à la normale Talborjt', 1, 6),
+(3, 'ACTIVATION', '2025-02-20 18:25:00', 'ALERTE', 'operateur1', 'INACTIVE', 'ACTIVE', 'Renfort PMP-002 sur alerte Talborjt', 2, 6),
+(4, 'DESACTIVATION', '2025-02-21 06:10:00', 'MANUEL', 'operateur1', 'ACTIVE', 'INACTIVE', 'Fin alerte quartier Talborjt', 2, 6),
 (5, 'MAINTENANCE', '2025-03-01 07:00:00', 'PLANIFIE', 'technicien1', 'INACTIVE', 'MAINTENANCE', 'Début maintenance préventive PMP-003', 3, 5),
-(6, 'ACTIVATION', '2025-03-02 01:00:00', 'AUTOMATIQUE', NULL, 'INACTIVE', 'ACTIVE', 'Activation automatique - capteurs critiques Zone Sud', 4, 2),
-(7, 'ACTIVATION', '2025-03-02 01:30:00', 'AUTOMATIQUE', NULL, 'INACTIVE', 'ACTIVE', 'Renfort automatique Zone Sud', 5, 2),
-(8, 'ACTIVATION', '2025-03-02 03:00:00', 'AUTOMATIQUE', NULL, 'INACTIVE', 'ACTIVE', 'Activation automatique Zone Commerce', 9, 1),
-(9, 'DESACTIVATION', '2025-02-16 07:00:00', 'ALERTE', 'technicien2', 'ACTIVE', 'PANNE', 'Arrêt d urgence : défaillance moteur PMP-010', 10, 4),
-(10, 'ACTIVATION', '2025-03-01 22:00:00', 'PLANIFIE', NULL, 'INACTIVE', 'ACTIVE', 'Démarrage planifié nuit Zone Port', 8, NULL),
-(11, 'ACTIVATION', '2025-03-02 04:00:00', 'AUTOMATIQUE', NULL, 'INACTIVE', 'ACTIVE', 'Activation automatique Zone Industrielle Sud', 12, NULL);
+(6, 'ACTIVATION', '2025-03-02 01:00:00', 'AUTOMATIQUE', NULL, 'INACTIVE', 'ACTIVE', 'Activation automatique - capteurs critiques Hay Mohammadi', 4, 2),
+(7, 'ACTIVATION', '2025-03-02 01:30:00', 'AUTOMATIQUE', NULL, 'INACTIVE', 'ACTIVE', 'Renfort automatique Hay Mohammadi', 5, 2),
+(8, 'ACTIVATION', '2025-03-02 03:00:00', 'AUTOMATIQUE', NULL, 'INACTIVE', 'ACTIVE', 'Activation automatique Founty front de mer', 9, 1),
+(9, 'DESACTIVATION', '2025-02-16 07:00:00', 'ALERTE', 'technicien2', 'ACTIVE', 'PANNE', 'Arrêt d urgence : défaillance moteur Founty Marina', 10, 4),
+(10, 'ACTIVATION', '2025-03-01 22:00:00', 'PLANIFIE', NULL, 'INACTIVE', 'ACTIVE', 'Démarrage planifié nuit Port d Agadir', 8, NULL),
+(11, 'ACTIVATION', '2025-03-02 04:00:00', 'AUTOMATIQUE', NULL, 'INACTIVE', 'ACTIVE', 'Activation automatique Dcheira El Jihadia', 12, NULL);
 
 -- --------------------------------------------------------
 
@@ -320,18 +320,18 @@ CREATE TABLE `pompe` (
 --
 
 INSERT INTO `pompe` (`id_pompe`, `reference`, `nom`, `localisation`, `latitude`, `longitude`, `capacite`, `statut`, `mode_activation`, `heures_fonctionnement`, `derniere_activation`, `date_installation`, `derniere_maintenance`, `date_creation`, `id_zone`) VALUES
-(1, 'PMP-001', 'Pompe Nord P1', 'Station pompage Nord, Bd Industriel', 30.42900000, -9.59600000, 350.00, 'ACTIVE', 'AUTOMATIQUE', 2450, '2025-03-02 06:00:00', '2022-05-10', '2025-01-15 07:00:00', '2026-03-04 22:24:34', 1),
-(2, 'PMP-002', 'Pompe Nord P2', 'Station pompage Nord, Bd Industriel', 30.42850000, -9.59650000, 350.00, 'INACTIVE', 'AUTOMATIQUE', 1890, '2025-02-20 14:00:00', '2022-05-10', '2024-12-10 08:00:00', '2026-03-04 22:24:34', 1),
-(3, 'PMP-003', 'Pompe Secours Nord', 'Station pompage Nord, sortie secours', 30.42950000, -9.59550000, 200.00, 'MAINTENANCE', 'MANUEL', 980, '2025-02-28 10:00:00', '2022-05-10', '2025-03-01 07:00:00', '2026-03-04 22:24:34', 1),
-(4, 'PMP-004', 'Pompe Centre P1', 'Station centrale, sous-sol Municipalité', 30.41400000, -9.59950000, 500.00, 'ACTIVE', 'AUTOMATIQUE', 5600, '2025-03-02 01:00:00', '2021-08-15', '2025-02-10 09:00:00', '2026-03-04 22:24:34', 2),
-(5, 'PMP-005', 'Pompe Centre P2', 'Station centrale, sous-sol Municipalité', 30.41380000, -9.59930000, 500.00, 'ACTIVE', 'AUTOMATIQUE', 5420, '2025-03-02 01:30:00', '2021-08-15', '2025-02-10 10:00:00', '2026-03-04 22:24:34', 2),
-(6, 'PMP-006', 'Pompe Centre Secours', 'Station centrale, module secours', 30.41420000, -9.59970000, 250.00, 'INACTIVE', 'MANUEL', 1200, '2025-01-15 17:00:00', '2021-08-15', '2025-01-16 07:00:00', '2026-03-04 22:24:34', 2),
-(7, 'PMP-007', 'Pompe Est R1', 'Station résidentielle Est, Hay Mohammadi', 30.43700000, -9.58050000, 280.00, 'INACTIVE', 'PLANIFIE', 1560, '2025-02-25 20:00:00', '2023-03-20', '2024-09-20 09:00:00', '2026-03-04 22:24:34', 3),
-(8, 'PMP-008', 'Pompe Port P1', 'Station portuaire, quai A', 30.40200000, -9.61250000, 600.00, 'ACTIVE', 'AUTOMATIQUE', 7800, '2025-03-01 22:00:00', '2020-11-01', '2024-12-20 08:00:00', '2026-03-04 22:24:34', 4),
-(9, 'PMP-009', 'Pompe Commerce C1', 'Station commerciale, parking sous-sol', 30.42100000, -9.59420000, 420.00, 'ACTIVE', 'AUTOMATIQUE', 3200, '2025-03-02 03:00:00', '2023-07-05', '2025-01-25 07:00:00', '2026-03-04 22:24:34', 5),
-(10, 'PMP-010', 'Pompe Commerce C2', 'Station commerciale, module B', 30.42080000, -9.59440000, 420.00, 'PANNE', 'AUTOMATIQUE', 3100, '2025-02-15 11:00:00', '2023-07-05', '2025-02-16 07:00:00', '2026-03-04 22:24:34', 5),
-(11, 'PMP-011', 'Pompe Littoral L1', 'Station littorale, promenade', 30.39950000, -9.62350000, 180.00, 'INACTIVE', 'PLANIFIE', 320, '2024-12-10 07:00:00', '2022-01-15', '2024-11-15 08:00:00', '2026-03-04 22:24:34', 7),
-(12, 'PMP-012', 'Pompe Industriel Sud I1', 'Station industrielle Sud, accès B', 30.40300000, -9.60900000, 550.00, 'ACTIVE', 'AUTOMATIQUE', 4100, '2025-03-02 04:00:00', '2022-07-20', '2025-02-20 10:00:00', '2026-03-04 22:24:34', 8);
+(1, 'PMP-001', 'Pompe Talborjt P1', 'Station pompage Talborjt, Rue Allal Ben Abdellah', 30.42145600, -9.59801200, 450.00, 'ACTIVE', 'AUTOMATIQUE', 2450, '2025-03-02 06:00:00', '2022-05-10', '2025-01-15 07:00:00', '2026-03-04 22:24:34', 1),
+(2, 'PMP-002', 'Pompe Talborjt P2', 'Station pompage Talborjt, module secondaire', 30.42098900, -9.59845600, 450.00, 'INACTIVE', 'AUTOMATIQUE', 1890, '2025-02-20 14:00:00', '2022-05-10', '2024-12-10 08:00:00', '2026-03-04 22:24:34', 1),
+(3, 'PMP-003', 'Pompe Secours Talborjt', 'Station Talborjt, sortie secours Oued Tildi', 30.42189000, -9.59756700, 300.00, 'MAINTENANCE', 'MANUEL', 980, '2025-02-28 10:00:00', '2022-05-10', '2025-03-01 07:00:00', '2026-03-04 22:24:34', 1),
+(4, 'PMP-004', 'Pompe Hay Mohammadi P1', 'Station centrale Hay Mohammadi, Avenue FAR', 30.41356700, -9.60023400, 600.00, 'ACTIVE', 'AUTOMATIQUE', 5600, '2025-03-02 01:00:00', '2021-08-15', '2025-02-10 09:00:00', '2026-03-04 22:24:34', 2),
+(5, 'PMP-005', 'Pompe Hay Mohammadi P2', 'Station centrale, module de renfort', 30.41323400, -9.59989000, 600.00, 'ACTIVE', 'AUTOMATIQUE', 5420, '2025-03-02 01:30:00', '2021-08-15', '2025-02-10 10:00:00', '2026-03-04 22:24:34', 2),
+(6, 'PMP-006', 'Pompe Souk El Had', 'Station Souk El Had, parking souterrain', 30.41189000, -9.60167800, 350.00, 'INACTIVE', 'MANUEL', 1200, '2025-01-15 17:00:00', '2021-08-15', '2025-01-16 07:00:00', '2026-03-04 22:24:34', 2),
+(7, 'PMP-007', 'Pompe Anza R1', 'Station résidentielle Anza, Bd Prince Moulay Abdellah', 30.38878900, -9.56156700, 380.00, 'INACTIVE', 'PLANIFIE', 1560, '2025-02-25 20:00:00', '2023-03-20', '2024-09-20 09:00:00', '2026-03-04 22:24:34', 3),
+(8, 'PMP-008', 'Pompe Port Agadir P1', 'Station portuaire, secteur conserveries', 30.41567800, -9.61689000, 550.00, 'ACTIVE', 'AUTOMATIQUE', 7800, '2025-03-01 22:00:00', '2020-11-01', '2024-12-20 08:00:00', '2026-03-04 22:24:34', 4),
+(9, 'PMP-009', 'Pompe Founty C1', 'Station Founty, promenade balnéaire', 30.39223400, -9.60389000, 400.00, 'ACTIVE', 'AUTOMATIQUE', 3200, '2025-03-02 03:00:00', '2023-07-05', '2025-01-25 07:00:00', '2026-03-04 22:24:34', 5),
+(10, 'PMP-010', 'Pompe Founty Marina', 'Station Marina Founty, module B', 30.39189000, -9.60423400, 400.00, 'PANNE', 'AUTOMATIQUE', 3100, '2025-02-15 11:00:00', '2023-07-05', '2025-02-16 07:00:00', '2026-03-04 22:24:34', 5),
+(11, 'PMP-011', 'Pompe Tassila I1', 'Station industrielle Tassila, zone usines', 30.35756700, -9.54489000, 180.00, 'INACTIVE', 'PLANIFIE', 320, '2024-12-10 07:00:00', '2022-01-15', '2024-11-15 08:00:00', '2026-03-04 22:24:34', 7),
+(12, 'PMP-012', 'Pompe Dcheira P1', 'Station Dcheira El Jihadia, Avenue Al Qods', 30.37967800, -9.56712300, 500.00, 'ACTIVE', 'AUTOMATIQUE', 4100, '2025-03-02 04:00:00', '2022-07-20', '2025-02-20 10:00:00', '2026-03-04 22:24:34', 8);
 
 --
 -- Déclencheurs `pompe`
@@ -415,14 +415,14 @@ CREATE TABLE `zone` (
 --
 
 INSERT INTO `zone` (`id_zone`, `nom_zone`, `superficie`, `population`, `latitude`, `longitude`, `niveau_risque`, `date_creation`, `date_modification`) VALUES
-(1, 'Zone Nord - Quartier Industriel', 145.50, 12500, 30.42701234, -9.59812345, 'ELEVE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
-(2, 'Zone Sud - Centre Ville', 89.30, 45000, 30.41234567, -9.60123456, 'CRITIQUE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
-(3, 'Zone Est - Résidentiel', 210.75, 32000, 30.43456789, -9.58234567, 'MOYEN', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
-(4, 'Zone Ouest - Zone Portuaire', 320.00, 8000, 30.40123456, -9.61345678, 'FAIBLE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
-(5, 'Zone Centre - Commerce', 55.20, 60000, 30.42000000, -9.59500000, 'CRITIQUE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
-(6, 'Zone Périphérique Nord-Est', 480.90, 5500, 30.45678901, -9.57123456, 'FAIBLE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
-(7, 'Zone Littoral', 95.60, 18000, 30.39876543, -9.62456789, 'MOYEN', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
-(8, 'Zone Industrielle Sud', 275.40, 3200, 30.40234567, -9.61012345, 'ELEVE', '2026-03-04 22:24:33', '2026-03-04 22:24:33');
+(1, 'Talborjt - Centre Historique', 125.80, 35000, 30.42078900, -9.59865400, 'CRITIQUE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
+(2, 'Hay Mohammadi - Zone Commerciale', 180.50, 58000, 30.41234500, -9.60123400, 'ELEVE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
+(3, 'Anza - Quartier Résidentiel', 245.30, 42000, 30.38765400, -9.56234500, 'MOYEN', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
+(4, 'Port d\'Agadir - Zone Portuaire', 310.00, 3500, 30.41456700, -9.61789000, 'FAIBLE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
+(5, 'Founty - Front de Mer', 95.40, 28000, 30.39123400, -9.60456700, 'MOYEN', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
+(6, 'Tilila - Quartier Populaire', 165.70, 72000, 30.43456700, -9.58123400, 'ELEVE', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
+(7, 'Quartier Industriel Tassila', 520.50, 8500, 30.35678900, -9.54567800, 'MOYEN', '2026-03-04 22:24:33', '2026-03-04 22:24:33'),
+(8, 'Dcheira - Extension Sud', 285.90, 48000, 30.37890100, -9.56789000, 'CRITIQUE', '2026-03-04 22:24:33', '2026-03-04 22:24:33');
 
 --
 -- Index pour les tables déchargées
