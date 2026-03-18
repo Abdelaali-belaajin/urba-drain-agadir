@@ -31,7 +31,8 @@ BEGIN
                rd.bouche_amont_id,
                rd.bouche_aval_id,
                rd.debit_max_Lmin,
-               rd.debit_actuel_Lmin
+               rd.debit_actuel_Lmin,
+               ba.taux_remplissage
         FROM   RESEAU_DRAINAGE rd
         JOIN   BOUCHE_EGOUT    ba ON ba.bouche_id = rd.bouche_amont_id
         WHERE  ba.zone_id = p_zone_id;
@@ -49,18 +50,13 @@ BEGIN
     boucle_segments: LOOP
         FETCH cur_segments INTO
             v_segment_id, v_bouche_amont, v_bouche_aval,
-            v_debit_max, v_debit_actuel;
+            v_debit_max, v_debit_actuel, v_taux_amont;
 
         IF v_finished THEN
             LEAVE boucle_segments;
         END IF;
 
         SET v_nb_segments = v_nb_segments + 1;
-
-        -- Récupérer le taux de remplissage de la bouche amont
-        SELECT taux_remplissage INTO v_taux_amont
-        FROM   BOUCHE_EGOUT
-        WHERE  bouche_id = v_bouche_amont;
 
         -- Calculer le débit actuel basé sur le taux de remplissage
         -- Formule : débit proportionnel au taux de remplissage
