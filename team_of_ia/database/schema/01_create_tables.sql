@@ -119,7 +119,7 @@ CREATE TABLE ALERTE (
     capteur_id          INT             NOT NULL,
     bouche_id           INT             NOT NULL,
     zone_id             INT             NOT NULL,
-    niveau_alerte       ENUM('INFO','WARNING','CRITICAL','EMERGENCY') NOT NULL,
+    niveau_alerte       ENUM('INFO','ELEVE','CRITIQUE','MOYEN','FAIBLE') NOT NULL,
     message             TEXT            NOT NULL,
     valeur_declenchante DECIMAL(10,2)   NOT NULL,
     date_heure          DATETIME        DEFAULT CURRENT_TIMESTAMP,

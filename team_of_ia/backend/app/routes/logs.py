@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from app.models.log_activite import LogActivite
 from app.middleware.rbac import require_role
+from db import db
+from sqlalchemy import text
 
 logs_bp = Blueprint("logs", __name__)
-
 
 @logs_bp.route("", methods=["GET"])
 @jwt_required()
@@ -12,19 +12,27 @@ logs_bp = Blueprint("logs", __name__)
 def get_logs():
     """
     GET /logs — Journal activité, lecture seule (ADMIN)
-    QA-06 : PUT/DELETE sur cette table sont bloqués ci-dessous.
-
-    Params : ?user_id=<int>  ?limit=<int>  ?offset=<int>
+    Récupère les logs depuis la nouvelle table sécurisée LOG_SYSTEM.
     """
-    user_id_filter = request.args.get("user_id", type=int)
-    limit          = min(request.args.get("limit", 100, type=int), 500)
-    offset         = request.args.get("offset", 0, type=int)
+    limit  = min(request.args.get("limit", 100, type=int), 500)
+    offset = request.args.get("offset", 0, type=int)
 
-    q = LogActivite.query.order_by(LogActivite.date_heure.desc())
-    if user_id_filter:
-        q = q.filter_by(user_id=user_id_filter)
-
-    return jsonify([l.to_dict() for l in q.limit(limit).offset(offset).all()]), 200
+    sql = "SELECT id, action, description, user_id, role, ip_address, created_at FROM LOG_SYSTEM ORDER BY created_at DESC LIMIT :l OFFSET :o"
+    res = db.session.execute(text(sql), {"l": limit, "o": offset}).fetchall()
+    
+    data = []
+    for r in res:
+        data.append({
+            "log_id": r[0],
+            "action": r[1],
+            "details": r[2],
+            "utilisateur_id": r[3],
+            "role": r[4],
+            "ip_address": r[5],
+            "date_action": r[6].isoformat() if r[6] else None
+        })
+    
+    return jsonify(data), 200
 
 
 # ── QA-06 : Bloquer toute modification de LOG_ACTIVITE ──────────────────────

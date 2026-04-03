@@ -22,11 +22,11 @@ class Capteur(db.Model):
             "capteur_id":        self.capteur_id,
             "zone_id":           self.zone_id,
             "bouche_id":         self.bouche_id,
-            "type_capteur":      self.type_capteur,
+            "type_capteur":      str(self.type_capteur) if self.type_capteur else None,
             "modele":            self.modele,
             "seuil_alerte":      float(self.seuil_alerte) if self.seuil_alerte else None,
             "seuil_critique":    float(self.seuil_critique) if self.seuil_critique else None,
-            "statut":            self.statut,
+            "statut":            str(self.statut) if self.statut else "INACTIF",
             "derniere_mesure":   self.derniere_mesure.isoformat() if self.derniere_mesure else None,
             "date_installation": self.date_installation.isoformat() if self.date_installation else None,
         }

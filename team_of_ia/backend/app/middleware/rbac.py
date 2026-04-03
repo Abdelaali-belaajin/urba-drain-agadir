@@ -10,7 +10,7 @@ def require_role(*roles):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            user = Utilisateur.query.get(get_jwt_identity())
+            user = Utilisateur.query.get(int(get_jwt_identity()))
             if not user or not user.actif:
                 return jsonify({"error": "Compte introuvable ou désactivé"}), 401
             if user.role not in roles:
@@ -24,7 +24,7 @@ def require_min_role(min_role: str):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            user = Utilisateur.query.get(get_jwt_identity())
+            user = Utilisateur.query.get(int(get_jwt_identity()))
             if not user or not user.actif:
                 return jsonify({"error": "Compte introuvable ou désactivé"}), 401
             if ROLE_HIERARCHY.get(user.role, 0) < ROLE_HIERARCHY.get(min_role, 99):

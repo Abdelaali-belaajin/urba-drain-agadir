@@ -18,7 +18,7 @@ def login():
     if not user or not user.actif or not user.check_password(password):
         return jsonify({"error": "Identifiants invalides"}), 401
     user.derniere_connexion = datetime.utcnow()
-    token = create_access_token(identity=user.user_id)
+    token = create_access_token(identity=str(user.user_id))
     LogActivite.create(user.user_id, "LOGIN", "UTILISATEUR",
                        ip=request.remote_addr)
     db.session.commit()
@@ -27,7 +27,7 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     LogActivite.create(user_id, "LOGOUT", "UTILISATEUR",
                        ip=request.remote_addr)
     db.session.commit()
@@ -36,13 +36,13 @@ def logout():
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()
 def get_me():
-    user = Utilisateur.query.get_or_404(get_jwt_identity())
+    user = Utilisateur.query.get_or_404(int(get_jwt_identity()))
     return jsonify(user.to_dict()), 200
 
 @auth_bp.route("/me", methods=["PUT"])
 @jwt_required()
 def update_me():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user    = Utilisateur.query.get_or_404(user_id)
     data    = request.get_json(silent=True) or {}
     if "nom" in data:
@@ -60,7 +60,7 @@ def update_me():
 @auth_bp.route("/password", methods=["PUT"])
 @jwt_required()
 def change_password():
-    user_id  = get_jwt_identity()
+    user_id  = int(get_jwt_identity())
     user     = Utilisateur.query.get_or_404(user_id)
     data     = request.get_json(silent=True) or {}
     current  = data.get("current_password", "")

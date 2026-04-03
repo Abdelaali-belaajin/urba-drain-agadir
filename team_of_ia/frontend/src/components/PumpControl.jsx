@@ -1,236 +1,244 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import { Activity, Power, Wrench, AlertTriangle, MapPin, Gauge, Zap } from 'lucide-react';
 
-export default function PumpControl({ pompes, onUpdatePompe, zones = [], userRole = 'LECTEUR', dark }) {
-    const T = {
-        surface: dark ? '#1e293b' : '#ffffff',
-        surface2: dark ? '#273449' : '#f8fafc',
-        border: dark ? '#334155' : '#e2e8f0',
-        text: dark ? '#f1f5f9' : '#0f172a',
-        textSub: dark ? '#94a3b8' : '#64748b',
-        textMut: dark ? '#475569' : '#94a3b8',
-        shadow: dark ? '0 4px 6px -1px rgba(0,0,0,.3), 0 2px 4px -1px rgba(0,0,0,.15)' : '0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -1px rgba(0,0,0,.03)',
-    }
-
-    const STATUS = {
-        ACTIVE: { c: '#16a34a', bg: dark ? 'rgba(22,163,74,.07)' : '#f0fdf4', lbl: 'Actif' },
-        INACTIVE: { c: '#64748b', bg: dark ? 'rgba(100,116,139,.07)' : '#f8fafc', lbl: 'Inactif' },
-        PANNE: { c: '#dc2626', bg: dark ? 'rgba(220,38,38,.07)' : '#fef2f2', lbl: 'En panne' },
-        MAINTENANCE: { c: '#d97706', bg: dark ? 'rgba(217,119,6,.07)' : '#fffbeb', lbl: 'Maintenance' },
-    }
-
-    // --- Toasts locaux ---
-    const [toasts, setToasts] = useState([]);
-    const showToast = (msg, type = 'success') => {
-        const id = Date.now() + Math.random();
-        setToasts(prev => [...prev, { id, msg, type }]);
-        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
-    };
-
-    // --- Auto-activation si zone CRITIQUE ---
-    useEffect(() => {
-        let needsUpdate = false;
-        pompes.forEach(p => {
-            const zone = zones.find(z => z.quartier === p.quartier);
-            if (zone && zone.niveau_risque === 'CRITIQUE') {
-                if (p.automatique && p.statut === 'INACTIVE') {
-                    if (onUpdatePompe) onUpdatePompe(p.pompe_id, { statut: 'ACTIVE', debit_actuel: p.debit_max_Lmin });
-                    needsUpdate = true;
-                }
-            }
-        });
-        if (needsUpdate) showToast('⚠️ Pompes activées automatiquement (Zone CRITIQUE)', 'error');
-    }, [zones, pompes, onUpdatePompe]);
-
-    // --- Actions ---
-    const handleToggleState = (p) => {
-        if (p.statut === 'PANNE' || p.statut === 'MAINTENANCE') return;
-        if (p.automatique) { showToast(`Désactivez d'abord le mode automatique pour ${p.nom_pompe}`, 'error'); return; }
-        const newStatut = p.statut === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-        const newDebit = newStatut === 'ACTIVE' ? Math.round(p.debit_max_Lmin * 0.72) : 0;
-        if (onUpdatePompe) onUpdatePompe(p.pompe_id, { statut: newStatut, debit_actuel: newDebit });
-        showToast(`${p.nom_pompe} ${newStatut === 'ACTIVE' ? 'activée' : 'arrêtée'} avec succès`);
-    };
-
-    const handleReportMaintenance = (p) => {
-        if (!['ADMIN', 'TECHNICIEN', 'OPERATEUR'].includes(userRole)) {
-            showToast('Accès refusé : Droits insuffisants', 'error'); return;
-        }
-        if (onUpdatePompe) onUpdatePompe(p.pompe_id, { statut: 'MAINTENANCE', debit_actuel: 0 });
-        showToast(`${p.nom_pompe} passée en MAINTENANCE.`);
-    };
-
-    // FIX P6: Sortir de MAINTENANCE → INACTIVE (remettre en service)
-    const handleRetourService = (p) => {
-        if (!['ADMIN', 'TECHNICIEN', 'OPERATEUR'].includes(userRole)) {
-            showToast('Accès refusé : Droits insuffisants', 'error'); return;
-        }
-        if (onUpdatePompe) onUpdatePompe(p.pompe_id, { statut: 'INACTIVE', debit_actuel: 0 });
-        showToast(`${p.nom_pompe} remise en service — statut INACTIVE.`, 'success');
-    };
-
-    const handleToggleMode = (p) => {
-        if (p.statut === 'PANNE') { showToast("Impossible de changer le mode d'une pompe en panne", 'error'); return; }
-        if (!['ADMIN', 'OPERATEUR'].includes(userRole)) { showToast('Accès refusé : Seuls ADMIN et OPERATEUR peuvent changer le mode', 'error'); return; }
-        const newMode = !p.automatique;
-        if (onUpdatePompe) onUpdatePompe(p.pompe_id, { automatique: newMode });
-        showToast(`${p.nom_pompe} → Mode ${newMode ? 'Automatique' : 'Manuel'}`, 'info');
-    };
-
-    const handleManualDebit = (p, val) => {
-        const debit = Number(val);
-        const statut = debit > 0 ? 'ACTIVE' : 'INACTIVE';
-        if (onUpdatePompe) onUpdatePompe(p.pompe_id, { debit_actuel: debit, statut });
-    };
-
-    const actives = pompes.filter(p => p.statut === 'ACTIVE').length;
+// FIX BUG 2: Backend returns debit_max_Lmin (L/min), not capacite_max.
+// safeMax guards against NaN / division by zero in the gauge.
+const CircularGauge = ({ value, max, color, size = 120 }) => {
+    const strokeWidth = 8;
+    const radius = (size - strokeWidth) / 2;
+    const circum = radius * 2 * Math.PI;
+    const safeMax   = max > 0 ? max : 1;
+    const safeValue = isFinite(value) && value >= 0 ? value : 0;
+    const percent   = Math.min(Math.max(safeValue / safeMax, 0), 1);
+    const strokeDashoffset = circum - percent * circum;
 
     return (
-        <div style={{ position: 'relative' }}>
-            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '10px', boxShadow: T.shadow, overflow: 'hidden' }}>
-
-                {/* Header */}
-                <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.surface2 }}>
-                    <span style={{ fontWeight: '700', fontSize: '14px', color: T.text, letterSpacing: '0.02em' }}>⚙️ Gestion des équipements</span>
-                    <span style={{ fontSize: '12px', color: T.textSub, fontWeight: '500' }}>{actives}/{pompes.length} pompes actives</span>
-                </div>
-
-                {/* Grille 2 colonnes */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '1px', background: T.border }}>
-                    {pompes.map(p => {
-                        const pct = p.debit_max_Lmin > 0 ? Math.round(p.debit_actuel / p.debit_max_Lmin * 100) : 0
-                        const sc = STATUS[p.statut] || STATUS.INACTIVE
-                        const barColor = pct > 85 ? '#dc2626' : pct > 60 ? '#d97706' : '#16a34a'
-                        const isCritique = zones.find(z => z.quartier === p.quartier)?.niveau_risque === 'CRITIQUE'
-
-                        return (
-                            <div key={p.pompe_id} className="row-hover" style={{
-                                background: isCritique && p.statut === 'ACTIVE' ? (dark ? 'rgba(220,38,38,.12)' : '#fef2f2') : sc.bg,
-                                padding: '20px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                                border: isCritique && p.statut === 'ACTIVE' ? '1px solid #fca5a5' : '1px solid transparent',
-                                transition: 'all 0.2s ease', position: 'relative'
-                            }}>
-                                {/* Titre + statut */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                    <div>
-                                        <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '4px', color: T.text, letterSpacing: '0.01em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            {p.nom_pompe}
-                                            {isCritique && p.statut === 'ACTIVE' && (
-                                                <span style={{ fontSize: '9px', background: '#dc2626', color: 'white', padding: '2px 8px', borderRadius: '99px', fontWeight: '700', letterSpacing: '0.05em' }}>URGENCE ZONE</span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: '12px', color: T.textSub }}>{p.quartier}</div>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: dark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.6)', padding: '4px 10px', borderRadius: '99px', border: `1px solid ${sc.c}40` }}>
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: sc.c, boxShadow: `0 0 8px ${sc.c}80` }} />
-                                        <span style={{ fontSize: '12px', color: sc.c, fontWeight: '600', letterSpacing: '0.03em' }}>{sc.lbl}</span>
-                                    </div>
-                                </div>
-
-                                {/* Barre de débit / Slider */}
-                                <div style={{ marginBottom: '10px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: T.textSub, marginBottom: '5px' }}>
-                                        <span>{p.debit_actuel.toLocaleString()} / {p.debit_max_Lmin.toLocaleString()} L/min</span>
-                                        <span style={{ fontWeight: '600', color: barColor }}>{pct}%</span>
-                                    </div>
-                                    {!p.automatique && p.statut !== 'PANNE' && p.statut !== 'MAINTENANCE' ? (
-                                        <input type="range" min="0" max={p.debit_max_Lmin} value={p.debit_actuel}
-                                            onChange={e => handleManualDebit(p, e.target.value)}
-                                            style={{ width: '100%', cursor: 'ew-resize', margin: '4px 0' }} />
-                                    ) : (
-                                        <div style={{ height: '6px', background: dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)', borderRadius: '99px', overflow: 'hidden' }}>
-                                            <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: '99px', transition: 'width .5s cubic-bezier(0.4,0,0.2,1)' }} />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Footer (Mode + Action) */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px' }}>
-
-                                    {/* Bouton Mode Auto/Manuel */}
-                                    <button onClick={() => handleToggleMode(p)} className="action-btn" style={{
-                                        background: p.automatique ? (dark ? 'rgba(29,78,216,0.15)' : '#eff6ff') : (dark ? 'rgba(217,119,6,0.15)' : '#fffbeb'),
-                                        border: p.automatique ? `1px solid ${dark ? 'rgba(29,78,216,0.3)' : '#bfdbfe'}` : `1px solid ${dark ? 'rgba(217,119,6,0.3)' : '#fcd34d'}`,
-                                        fontSize: '11px', color: p.automatique ? '#1d4ed8' : '#d97706',
-                                        display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: '600',
-                                        padding: '5px 10px', borderRadius: '6px'
-                                    }}>
-                                        <span style={{ fontSize: '13px' }}>{p.automatique ? '🤖' : '🖐️'}</span>
-                                        {p.automatique ? 'Mode Auto' : 'Mode Manuel'}
-                                    </button>
-
-                                    {/* ── Bouton action principal selon statut ──────── */}
-                                    {p.statut === 'PANNE' ? (
-                                        // FIX P6: PANNE → "Signaler réparation" → passe MAINTENANCE
-                                        <button className="action-btn fade" onClick={() => handleReportMaintenance(p)} style={{
-                                            padding: '7px 14px', borderRadius: '99px', border: 'none',
-                                            background: '#d97706', color: 'white',
-                                            fontSize: '11px', fontWeight: '700', letterSpacing: '0.02em',
-                                            cursor: 'pointer', fontFamily: 'inherit',
-                                            boxShadow: '0 4px 10px rgba(217,119,6,0.25)',
-                                            display: 'flex', alignItems: 'center', gap: '6px'
-                                        }}>
-                                            <span>🔧</span> Signaler réparation
-                                        </button>
-                                    ) : p.statut === 'MAINTENANCE' ? (
-                                        // FIX P6: MAINTENANCE → "Remettre en service" → passe INACTIVE
-                                        <button className="action-btn fade" onClick={() => handleRetourService(p)} title="Réparation terminée — remettre en service" style={{
-                                            padding: '7px 14px', borderRadius: '99px', border: 'none',
-                                            background: 'linear-gradient(135deg,#16a34a,#15803d)', color: 'white',
-                                            fontSize: '11px', fontWeight: '700', letterSpacing: '0.02em',
-                                            cursor: 'pointer', fontFamily: 'inherit',
-                                            boxShadow: '0 4px 10px rgba(22,163,74,0.3)',
-                                            display: 'flex', alignItems: 'center', gap: '6px'
-                                        }}>
-                                            <span>✅</span> Remettre en service
-                                        </button>
-                                    ) : (
-                                        // ACTIVE / INACTIVE → toggle normal
-                                        <button
-                                            className={p.automatique ? '' : 'action-btn fade'}
-                                            disabled={p.automatique}
-                                            onClick={() => handleToggleState(p)}
-                                            title={p.automatique ? 'Désactivez le mode auto pour contrôler manuellement' : ''}
-                                            style={{
-                                                padding: '7px 16px', borderRadius: '99px', border: 'none',
-                                                background: p.automatique
-                                                    ? T.border
-                                                    : p.statut === 'ACTIVE'
-                                                        ? 'linear-gradient(135deg,#ef4444,#b91c1c)'
-                                                        : 'linear-gradient(135deg,#16a34a,#15803d)',
-                                                color: p.automatique ? T.textMut : 'white',
-                                                fontSize: '11px', fontWeight: '700', letterSpacing: '0.03em',
-                                                cursor: p.automatique ? 'not-allowed' : 'pointer',
-                                                fontFamily: 'inherit', opacity: p.automatique ? 0.6 : 1,
-                                                boxShadow: p.automatique ? 'none' : p.statut === 'ACTIVE'
-                                                    ? '0 4px 12px rgba(220,38,38,0.3)'
-                                                    : '0 4px 12px rgba(22,163,74,0.3)',
-                                            }}>
-                                            {p.statut === 'ACTIVE' ? 'Arrêter la pompe' : 'Activer la pompe'}
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
-
-            {/* Toasts */}
-            <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '8px', pointerEvents: 'none' }}>
-                {toasts.map(t => (
-                    <div key={t.id} style={{
-                        padding: '12px 18px', borderRadius: '10px',
-                        background: t.type === 'error' ? '#dc2626' : t.type === 'info' ? '#1d4ed8' : '#16a34a',
-                        color: 'white', fontSize: '13px', fontWeight: '500',
-                        boxShadow: '0 4px 16px rgba(0,0,0,.25)',
-                        animation: 'fadeUp .25s cubic-bezier(0.4,0,0.2,1)',
-                        display: 'flex', alignItems: 'center', gap: '8px'
-                    }}>
-                        <span style={{ fontSize: '14px' }}>{t.type === 'error' ? '✖' : t.type === 'info' ? 'ℹ' : '✓'}</span>
-                        {t.msg}
-                    </div>
-                ))}
+        <div style={{ position: 'relative', width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={size/2} cy={size/2} r={radius} fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} />
+                <circle cx={size/2} cy={size/2} r={radius} fill="transparent" stroke={color} strokeWidth={strokeWidth}
+                    strokeDasharray={circum} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)', filter: `drop-shadow(0 0 6px ${color}80)` }}
+                />
+            </svg>
+            <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '21px', fontWeight: '800', color: '#f1f5f9', lineHeight: '1' }}>{Math.round(safeValue)}</span>
+                <span style={{ fontSize: '9px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>L/min</span>
             </div>
         </div>
-    )
+    );
+};
+
+export default function PumpControl({ pompes, zones, onUpdatePompe, userRole }) {
+    const [filter, setFilter] = useState('ALL');
+    const [sendingPumpId, setSendingPumpId] = useState(null);
+    const [localToast, setLocalToast] = useState(null);
+
+    const handleSignalPanne = async (pompe, zoneName, e) => {
+        e.stopPropagation();
+        setSendingPumpId(pompe.pompe_id);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`http://localhost:5000/pompes/${pompe.pompe_id}/signaler`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}` 
+                }
+            });
+            
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || data.error || 'Erreur API signaler');
+            }
+            
+            const data = await res.json();
+            setLocalToast(data.message || 'Alerte envoyée aux techniciens ✓');
+            setTimeout(() => setLocalToast(null), 3000);
+        } catch (err) {
+            console.error(err);
+            setLocalToast(err.message || 'Erreur envoi message');
+            setTimeout(() => setLocalToast(null), 3000);
+        } finally {
+            setSendingPumpId(null);
+        }
+    };
+
+    const canEdit = userRole === 'ADMIN' || userRole === 'OPERATEUR' || userRole === 'TECHNICIEN';
+
+    const getStatusConfig = (status) => {
+        switch (status) {
+            case 'ACTIVE':      return { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',    border: 'rgba(34,197,94,0.3)',   icon: <Activity size={14} />,      label: 'En Service' };
+            case 'INACTIVE':    return { color: '#64748b', bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.1)', icon: <Power size={14} />,         label: 'À l\'arrêt' };
+            case 'MAINTENANCE': return { color: '#f97316', bg: 'rgba(249,115,22,0.1)',   border: 'rgba(249,115,22,0.3)',  icon: <Wrench size={14} />,        label: 'Maintenance' };
+            case 'PANNE':       return { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)',   icon: <AlertTriangle size={14} />, label: 'En Panne' };
+            default:            return { color: '#94a3b8', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', icon: <Activity size={14} />,      label: status };
+        }
+    };
+
+    const filteredPompes = useMemo(() => filter === 'ALL' ? pompes : pompes.filter(p => p.statut === filter), [pompes, filter]);
+
+    const counts = {
+        ALL: pompes.length,
+        ACTIVE: pompes.filter(p => p.statut === 'ACTIVE').length,
+        INACTIVE: pompes.filter(p => p.statut === 'INACTIVE').length,
+        PANNE: pompes.filter(p => p.statut === 'PANNE').length,
+        MAINTENANCE: pompes.filter(p => p.statut === 'MAINTENANCE').length
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Header & Filters */}
+            <div style={{ background: 'rgba(12,20,38,0.6)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '24px', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Gauge size={22} />
+                    </div>
+                    <div>
+                        <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#f1f5f9', margin: 0 }}>Contrôle des Pompes</h2>
+                        <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '2px' }}>Réseau de pompage d'Agadir</div>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    {[
+                        { id: 'ALL', label: 'Toutes', color: '#3b82f6' },
+                        { id: 'ACTIVE', label: 'Actives', color: '#22c55e' },
+                        { id: 'INACTIVE', label: 'Inactives', color: '#64748b' },
+                        { id: 'PANNE', label: 'Pannes', color: '#ef4444' }
+                    ].map(f => (
+                        <button key={f.id} onClick={() => setFilter(f.id)} style={{ padding: '8px 16px', borderRadius: '10px', background: filter === f.id ? `${f.color}20` : 'transparent', color: filter === f.id ? f.color : '#94a3b8', border: `1px solid ${filter === f.id ? `${f.color}40` : 'transparent'}`, fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {f.label}
+                            <span style={{ background: filter === f.id ? `${f.color}30` : 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '99px', fontSize: '11px', color: filter === f.id ? f.color : '#cbd5e1' }}>{counts[f.id]}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Grid of Pumps */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
+                {filteredPompes.map(p => {
+                    const st = getStatusConfig(p.statut);
+                    const isLocked = p.statut === 'PANNE' || p.statut === 'MAINTENANCE';
+                    // FIX: use debit_max_Lmin, not capacite_max (that field doesn't exist in DB)
+                    const debitMax = p.debit_max_Lmin ?? 0;
+                    const currentDebit = p.statut === 'ACTIVE' ? Math.round(debitMax * 0.72) : 0;
+                    const zoneName = p.zone?.quartier || zones.find(z => z.zone_id === p.zone_id)?.quartier || `Zone ${p.zone_id}`;
+
+                    return (
+                        <div key={p.pompe_id} style={{ background: 'rgba(12,20,38,0.6)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', transition: 'all 0.3s', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)', position: 'relative', overflow: 'hidden' }}
+                            onMouseOver={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.borderColor=`${st.color}50`; }}
+                            onMouseOut={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'; }}
+                        >
+                            <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: `radial-gradient(circle, ${st.color}15 0%, transparent 70%)`, filter: 'blur(20px)', pointerEvents: 'none' }} />
+
+                            {/* Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 10 }}>
+                                <div>
+                                    <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#f1f5f9' }}>{p.nom_pompe}</h3>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#94a3b8' }}>
+                                        <MapPin size={12} color="#64748b" /> {zoneName}
+                                    </div>
+                                </div>
+                                <div style={{ padding: '6px 14px', borderRadius: '99px', background: st.bg, border: `1px solid ${st.border}`, color: st.color, fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {st.icon} {st.label}
+                                </div>
+                            </div>
+
+                            {/* Gauge + Stats */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', zIndex: 10 }}>
+                                <CircularGauge value={currentDebit} max={debitMax} color={st.color} size={110} />
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div>
+                                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Débit Max</div>
+                                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#f1f5f9' }}>
+                                            {debitMax > 0 ? debitMax.toLocaleString('fr-FR') : '—'} <span style={{ fontSize: '12px', color: '#94a3b8' }}>L/min</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+                                    <div>
+                                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Consommation</div>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Zap size={13} color="#eab308" /> {p.consommation_kw != null ? `${p.consommation_kw} kW` : '—'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Mode</div>
+                                        <div style={{ fontSize: '13px', color: p.automatique ? '#22c55e' : '#f97316', fontWeight: '600' }}>
+                                            {p.automatique ? '⚡ Automatique' : '🖐 Manuel'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions & Toggle */}
+                            <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 30, position: 'relative' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    {(() => {
+                                        const alertesActives = zones.find(z => z.zone_id === p.zone_id)?.nb_alertes > 0;
+                                        const isBlocked = p.statut === 'ACTIVE' && alertesActives && p.automatique;
+                                        const fullyDisabled = !canEdit || isLocked || isBlocked;
+                                        return (
+                                            <>
+                                                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                                                    Contrôle <span style={{ color: canEdit ? (isBlocked ? '#f97316' : '#cbd5e1') : '#dc2626' }}>{!canEdit ? 'Verrouillé' : isBlocked ? 'Bloqué (Incident)' : 'Autorisé'}</span>
+                                                </div>
+                                                <button disabled={fullyDisabled} title={isBlocked ? "Alerte en cours : Manuel requis" : ""} onClick={() => onUpdatePompe(p.pompe_id, { statut: p.statut === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })} style={{ position: 'relative', width: '56px', height: '30px', borderRadius: '99px', background: p.statut === 'ACTIVE' ? '#22c55e' : 'rgba(255,255,255,0.1)', border: 'none', cursor: fullyDisabled ? 'not-allowed' : 'pointer', opacity: fullyDisabled ? 0.5 : 1, transition: 'all 0.3s', boxShadow: p.statut === 'ACTIVE' ? '0 0 10px rgba(34,197,94,0.4)' : 'none' }}>
+                                                    <div style={{ position: 'absolute', top: '3px', left: p.statut === 'ACTIVE' ? '29px' : '3px', width: '24px', height: '24px', borderRadius: '50%', background: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.3)', transition: 'all 0.3s' }} />
+                                                </button>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                                
+                                {p.statut === 'PANNE' && userRole === 'ADMIN' && (
+                                    <button
+                                        disabled={sendingPumpId === p.pompe_id}
+                                        onClick={(e) => handleSignalPanne(p, zoneName, e)}
+                                        style={{
+                                            background: 'rgba(239,68,68,0.1)',
+                                            border: '1px solid rgba(239,68,68,0.3)',
+                                            color: '#ef4444',
+                                            borderRadius: '8px',
+                                            padding: '8px 14px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            cursor: sendingPumpId === p.pompe_id ? 'not-allowed' : 'pointer',
+                                            width: '100%',
+                                            opacity: sendingPumpId === p.pompe_id ? 0.7 : 1,
+                                            transition: 'all 0.2s',
+                                        }}
+                                        onMouseOver={e => !sendingPumpId && (e.currentTarget.style.background = 'rgba(239,68,68,0.2)')}
+                                        onMouseOut={e => !sendingPumpId && (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
+                                    >
+                                        {sendingPumpId === p.pompe_id ? 'Envoi...' : '🔧 Signaler au technicien'}
+                                    </button>
+                                )}
+                            </div>
+
+                            {isLocked && (
+                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(12,20,38,0.3)', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', cursor: 'not-allowed' }} onMouseOver={e => e.currentTarget.style.opacity = 1} onMouseOut={e => e.currentTarget.style.opacity = 0}>
+                                    <div style={{ background: '#0f172a', padding: '8px 16px', border: '1px solid #334155', borderRadius: '8px', fontSize: '13px', fontWeight: '600', color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <AlertTriangle size={16} color="#ef4444" /> Verrouillé ({p.statut})
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {filteredPompes.length === 0 && (
+                <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
+                    <h3 style={{ fontSize: '18px', color: '#f1f5f9', margin: '0 0 8px 0' }}>Aucune pompe trouvée</h3>
+                    <p style={{ margin: 0, fontSize: '14px' }}>Changez de filtre pour afficher les pompes.</p>
+                </div>
+            )}
+            {/* Toast Local */}
+            {localToast && (
+                <div style={{ position: 'fixed', bottom: '32px', right: '32px', zIndex: 9999, padding: '16px 20px', borderRadius: '14px', background: localToast.includes('Erreur') ? 'rgba(239,68,68,0.95)' : 'rgba(34,197,94,0.95)', backdropFilter: 'blur(10px)', color: 'white', fontSize: '14px', fontWeight: '600', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '12px', animation: 'slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    {localToast}
+                </div>
+            )}
+        </div>
+    );
 }

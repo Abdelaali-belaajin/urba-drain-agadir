@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import client from '../api/client'
 
 const ROLE_CFG = {
     ADMIN: { color: '#7c3aed', bg: 'rgba(124,58,237,.1)', border: 'rgba(124,58,237,.3)' },
@@ -14,15 +15,8 @@ const PERMS = {
     LECTEUR: { zones: true, capteurs: false, pompes: false, alertes: false, users: false, logs: false },
 }
 
-const USERS_INIT = [
-    { id: 1, nom: 'BELAAJIN Abdelaali', email: 'admin@urba-drain.ma', role: 'ADMIN', actif: true },
-    { id: 2, nom: 'BELHADJ Chadi', email: 'oper@urba-drain.ma', role: 'OPERATEUR', actif: true },
-    { id: 3, nom: 'BENELMALIH Mohamed', email: 'tech@urba-drain.ma', role: 'TECHNICIEN', actif: true },
-    { id: 4, nom: 'Lecteur Test', email: 'lecteur@urba-drain.ma', role: 'LECTEUR', actif: false },
-]
-
 export default function Admin({ dark }) {
-    const [users, setUsers] = useState(USERS_INIT)
+    const [users, setUsers] = useState([])
     const [modal, setModal] = useState(null)
     const [target, setTarget] = useState(null)
     const [toast, setToast] = useState(null)
@@ -39,29 +33,64 @@ export default function Admin({ dark }) {
         setToast({ msg, type }); setTimeout(() => setToast(null), 3000)
     }
 
+    const fetchUsers = useCallback(async () => {
+        try {
+            const { data } = await client.get('/users');
+            setUsers(data);
+        } catch (err) {
+            console.error(err);
+            showToast('Erreur lors du chargement des utilisateurs', 'error');
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers])
+
     const openAdd = () => {
         setForm({ nom: '', email: '', role: 'LECTEUR', password: '' }); setTarget(null); setModal('add')
     }
     const openEdit = (u) => {
+        // Le backend utilise user_id, non id
         setForm({ nom: u.nom, email: u.email, role: u.role, password: '' }); setTarget(u); setModal('edit')
     }
 
-    const saveAdd = () => {
+    const saveAdd = async () => {
         if (!form.nom || !form.email || !form.password) return showToast('Tous les champs sont requis', 'error')
-        setUsers(prev => [...prev, { id: Date.now(), nom: form.nom, email: form.email, role: form.role, actif: true }])
-        setModal(null); showToast(`Utilisateur ${form.nom} créé ✓`)
+        try {
+            const { data } = await client.post('/users', form);
+            setUsers(prev => [...prev, data]);
+            setModal(null); showToast(`Utilisateur ${data.nom} créé ✓`);
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Erreur', 'error');
+        }
     }
-    const saveEdit = () => {
-        setUsers(prev => prev.map(u => u.id !== target.id ? u : { ...u, nom: form.nom, email: form.email, role: form.role }))
-        setModal(null); showToast(`Profil mis à jour ✓`)
+    const saveEdit = async () => {
+        try {
+            const { data } = await client.put(`/users/${target.user_id}`, { nom: form.nom, email: form.email, role: form.role });
+            setUsers(prev => prev.map(u => u.user_id !== target.user_id ? u : data));
+            setModal(null); showToast(`Profil mis à jour ✓`);
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Erreur', 'error');
+        }
     }
-    const toggleActif = (u) => {
-        setUsers(prev => prev.map(x => x.id !== u.id ? x : { ...x, actif: !x.actif }))
-        showToast(`${u.nom} ${u.actif ? 'désactivé' : 'réactivé'} ✓`, u.actif ? 'error' : 'success')
+    const toggleActif = async (u) => {
+        try {
+            const { data } = await client.patch(`/users/${u.user_id}/toggle`);
+            setUsers(prev => prev.map(x => x.user_id !== u.user_id ? x : data));
+            showToast(`${data.nom} ${data.actif ? 'réactivé' : 'désactivé'} ✓`, data.actif ? 'success' : 'error');
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Erreur', 'error');
+        }
     }
-    const deleteUser = () => {
-        setUsers(prev => prev.filter(u => u.id !== target.id))
-        setModal(null); showToast(`Compte supprimé`, 'error')
+    const deleteUser = async () => {
+        try {
+            await client.delete(`/users/${target.user_id}`);
+            setUsers(prev => prev.filter(u => u.user_id !== target.user_id));
+            setModal(null); showToast(`Compte supprimé`, 'error');
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Erreur', 'error');
+        }
     }
 
     const inputStyle = {
@@ -121,11 +150,11 @@ export default function Admin({ dark }) {
                             {users.map((u, i) => {
                                 const rc = ROLE_CFG[u.role] || ROLE_CFG.LECTEUR
                                 return (
-                                    <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? `1px solid ${T.border}` : 'none', opacity: u.actif ? 1 : .5, transition: 'opacity .2s' }}>
+                                    <tr key={u.user_id} style={{ borderBottom: i < users.length - 1 ? `1px solid ${T.border}` : 'none', opacity: u.actif ? 1 : .5, transition: 'opacity .2s' }}>
                                         <td style={{ padding: '13px 16px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                 <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: `linear-gradient(135deg,${rc.color},${rc.color}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '12px', flexShrink: 0 }}>
-                                                    {u.nom[0]}
+                                                    {u.nom && u.nom[0] ? u.nom[0].toUpperCase() : '?'}
                                                 </div>
                                                 <span style={{ fontSize: '13px', fontWeight: '500', color: T.text }}>{u.nom}</span>
                                             </div>

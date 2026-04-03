@@ -37,7 +37,7 @@ def create_user():
     user = Utilisateur(nom=nom, email=email, role=role)
     user.set_password(password)
     db.session.add(user)
-    LogActivite.create(get_jwt_identity(), "CREATE_USER", "UTILISATEUR",
+    LogActivite.create(int(get_jwt_identity()), "CREATE_USER", "UTILISATEUR",
                        valeur_apres=f"email={email}, role={role}")
     db.session.commit()
     return jsonify(user.to_dict()), 201
@@ -64,7 +64,7 @@ def update_user(user_id):
             return jsonify({"error": f"Rôle invalide : {ROLES}"}), 400
         user.role = role
 
-    LogActivite.create(get_jwt_identity(), "UPDATE_USER", "UTILISATEUR",
+    LogActivite.create(int(get_jwt_identity()), "UPDATE_USER", "UTILISATEUR",
                        valeur_apres=f"user_id={user_id}")
     db.session.commit()
     return jsonify(user.to_dict()), 200
@@ -74,7 +74,7 @@ def update_user(user_id):
 @jwt_required()
 @require_role("ADMIN")
 def toggle_user(user_id):
-    admin_id = get_jwt_identity()
+    admin_id = int(get_jwt_identity())
     if user_id == admin_id:
         return jsonify({"error": "Impossible de se désactiver soi-même"}), 403
     user       = Utilisateur.query.get_or_404(user_id)
@@ -90,7 +90,7 @@ def toggle_user(user_id):
 @jwt_required()
 @require_role("ADMIN")
 def delete_user(user_id):
-    admin_id = get_jwt_identity()
+    admin_id = int(get_jwt_identity())
     if user_id == admin_id:
         return jsonify({"error": "Impossible de supprimer son propre compte"}), 403
     user = Utilisateur.query.get_or_404(user_id)

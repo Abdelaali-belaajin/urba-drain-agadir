@@ -7,7 +7,7 @@ capteurs_bp = Blueprint("capteurs", __name__)
 
 @capteurs_bp.route("", methods=["GET"])
 @jwt_required()
-@require_min_role("TECHNICIEN")
+@require_min_role("LECTEUR")
 def get_capteurs():
-    """GET /capteurs — liste capteurs + dernière mesure (TECHNICIEN+)"""
+    """GET /capteurs — liste capteurs + dernière mesure (LECTEUR+)"""
     return jsonify([c.to_dict(with_last_mesure=True) for c in Capteur.query.all()]), 200

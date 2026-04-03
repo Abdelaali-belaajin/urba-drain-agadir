@@ -1,515 +1,428 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import MapView from '../components/MapView'
-import StatsBar from '../components/StatsBar'
-import AlertPanel from '../components/AlertPanel'
-import AdminPanel from '../components/AdminPanel'
-import PumpControl from '../components/PumpControl'
-import SimOrage from '../components/SimOrage'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import MapView from '../components/MapView';
+import StatsBar from '../components/StatsBar';
+import AlertPanel from '../components/AlertPanel';
+import AdminPanel from '../components/AdminPanel';
+import SimOrage from '../components/SimOrage';
+import PumpControl from '../components/PumpControl';
+import MessagePanel from '../components/MessagePanel';
+import client, { getZones, getAlertes, getPompes, getCapteurs, resolveAlerte as apiResolveAlerte, togglePompe as apiTogglePompe, logout as apiLogout, changePassword } from '../api/client';
+import {
+    LayoutDashboard, AlertTriangle, Settings2, ShieldCheck,
+    CloudRain, LogOut, Droplets, Menu, Clock, Lock, MessageSquare
+} from 'lucide-react';
 
-// FIX P4: Lire rôle depuis localStorage au lieu d'un state hardcodé
 const getStoredUser = () => {
-    try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }
+    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
 }
 
-// ─── DONNÉES MOCK ─────────────────────────────────────────────────────────
-const ZONES_INIT = [
-    // FIX P2: nb_alertes SUPPRIMÉ de chaque zone — calculé dynamiquement depuis alertes
-    { zone_id: 1, quartier: 'Hay Mohammadi', coord_lat: 30.4350, coord_lng: -9.5650, niveau_risque: 'ELEVE', nb_pompes_actives: 1, population: 42000, superficie: 3.8 },
-    { zone_id: 2, quartier: 'Talborjt', coord_lat: 30.4250, coord_lng: -9.5950, niveau_risque: 'MOYEN', nb_pompes_actives: 0, population: 35000, superficie: 2.5 },
-    { zone_id: 3, quartier: 'Bensergao', coord_lat: 30.3950, coord_lng: -9.5750, niveau_risque: 'FAIBLE', nb_pompes_actives: 0, population: 22000, superficie: 8.2 },
-    { zone_id: 4, quartier: 'Anza', coord_lat: 30.4650, coord_lng: -9.6450, niveau_risque: 'CRITIQUE', nb_pompes_actives: 2, population: 30000, superficie: 6.5 },
-    { zone_id: 5, quartier: 'Al Massira', coord_lat: 30.4150, coord_lng: -9.5650, niveau_risque: 'MOYEN', nb_pompes_actives: 1, population: 48000, superficie: 4.1 },
-    { zone_id: 6, quartier: 'Tilila', coord_lat: 30.4120, coord_lng: -9.5350, niveau_risque: 'ELEVE', nb_pompes_actives: 1, population: 28000, superficie: 2.8 },
-    { zone_id: 7, quartier: 'Adrar', coord_lat: 30.4150, coord_lng: -9.5150, niveau_risque: 'FAIBLE', nb_pompes_actives: 0, population: 18000, superficie: 3.2 },
-    { zone_id: 8, quartier: 'Tikiouine', coord_lat: 30.3850, coord_lng: -9.5300, niveau_risque: 'FAIBLE', nb_pompes_actives: 0, population: 25000, superficie: 12.0 },
-    { zone_id: 9, quartier: 'Bensergao Sud', coord_lat: 30.3800, coord_lng: -9.5700, niveau_risque: 'MOYEN', nb_pompes_actives: 0, population: 15000, superficie: 5.5 },
-    { zone_id: 10, quartier: 'Al Houda', coord_lat: 30.4050, coord_lng: -9.5450, niveau_risque: 'MOYEN', nb_pompes_actives: 0, population: 20000, superficie: 2.2 },
-    { zone_id: 11, quartier: 'Founty', coord_lat: 30.4000, coord_lng: -9.6000, niveau_risque: 'FAIBLE', nb_pompes_actives: 0, population: 12000, superficie: 3.6 },
-    { zone_id: 12, quartier: 'Quartier Suisse', coord_lat: 30.4350, coord_lng: -9.6050, niveau_risque: 'FAIBLE', nb_pompes_actives: 0, population: 8000, superficie: 1.8 },
-    { zone_id: 13, quartier: 'Dakhla', coord_lat: 30.4150, coord_lng: -9.5700, niveau_risque: 'MOYEN', nb_pompes_actives: 0, population: 15000, superficie: 2.1 },
-    { zone_id: 14, quartier: 'Les Amicales', coord_lat: 30.4250, coord_lng: -9.5850, niveau_risque: 'ELEVE', nb_pompes_actives: 0, population: 12000, superficie: 1.5 },
-    { zone_id: 15, quartier: 'Charaf', coord_lat: 30.4350, coord_lng: -9.5750, niveau_risque: 'FAIBLE', nb_pompes_actives: 0, population: 18000, superficie: 2.2 },
-    { zone_id: 16, quartier: 'Riad Salam', coord_lat: 30.4050, coord_lng: -9.5550, niveau_risque: 'MOYEN', nb_pompes_actives: 0, population: 30000, superficie: 3.5 },
-    { zone_id: 17, quartier: 'Illigh', coord_lat: 30.4450, coord_lng: -9.5700, niveau_risque: 'FAIBLE', nb_pompes_actives: 0, population: 8000, superficie: 4.0 },
-    { zone_id: 18, quartier: 'Taddart', coord_lat: 30.4400, coord_lng: -9.6100, niveau_risque: 'CRITIQUE', nb_pompes_actives: 1, population: 22000, superficie: 2.8 },
-    { zone_id: 19, quartier: 'Sonaba', coord_lat: 30.3950, coord_lng: -9.5800, niveau_risque: 'FAIBLE', nb_pompes_actives: 0, population: 10000, superficie: 3.0 },
-    { zone_id: 20, quartier: 'El Khiam', coord_lat: 30.4180, coord_lng: -9.5820, niveau_risque: 'ELEVE', nb_pompes_actives: 0, population: 25000, superficie: 1.8 },
-    { zone_id: 21, quartier: 'Quartier Industriel', coord_lat: 30.4220, coord_lng: -9.5720, niveau_risque: 'CRITIQUE', nb_pompes_actives: 2, population: 5000, superficie: 5.5 },
-    { zone_id: 22, quartier: 'Najah', coord_lat: 30.4020, coord_lng: -9.5650, niveau_risque: 'MOYEN', nb_pompes_actives: 0, population: 20000, superficie: 2.6 },
-]
+export default function Dashboard({ user: userProp }) {
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [tab, setTab] = useState('carte');
+    const [now, setNow] = useState(new Date());
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [apiStatus, setApiStatus] = useState('connected'); // 'connected' | 'reconnecting' | 'error'
+    const [unreadMessages, setUnreadMessages] = useState(0);
 
-// FIX P2: zone_id ajouté dans chaque alerte pour lier carte ↔ alertes
-const ALERTES_INIT = [
-    { alerte_id: 1, zone_id: 4, quartier: 'Anza', niveau_alerte: 'EMERGENCY', message: "Débit critique — Avenue du Port dépasse 2000 L/min", date_heure: '2026-03-10 14:23', resolue: false },
-    { alerte_id: 2, zone_id: 4, quartier: 'Anza', niveau_alerte: 'CRITICAL', message: "Taux remplissage 94% — Bouche Zone Industrielle", date_heure: '2026-03-10 14:21', resolue: false },
-    { alerte_id: 3, zone_id: 6, quartier: 'Tilila', niveau_alerte: 'WARNING', message: "Niveau eau 78cm — seuil alerte dépassé capteur C14", date_heure: '2026-03-10 14:18', resolue: false },
-    { alerte_id: 4, zone_id: 1, quartier: 'Hay Mohammadi', niveau_alerte: 'WARNING', message: "Débit élevé — Rue Tildi 890 L/min", date_heure: '2026-03-10 14:15', resolue: false },
-    { alerte_id: 5, zone_id: 5, quartier: 'Al Massira', niveau_alerte: 'WARNING', message: "Pression anormale 3.2 bar sur segment amont", date_heure: '2026-03-10 14:10', resolue: false },
-    { alerte_id: 6, zone_id: 4, quartier: 'Anza', niveau_alerte: 'CRITICAL', message: "Pompe P-Anza-02 — surchauffe détectée", date_heure: '2026-03-10 13:58', resolue: false },
-    { alerte_id: 7, zone_id: 10, quartier: 'Al Houda', niveau_alerte: 'INFO', message: "Inspection programmée bouche 14 — dans 3 jours", date_heure: '2026-03-10 13:45', resolue: true },
-    { alerte_id: 8, zone_id: 2, quartier: 'Talborjt', niveau_alerte: 'INFO', message: "Capteur C04 — qualité signal MOYENNE", date_heure: '2026-03-10 13:30', resolue: true },
-]
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [pwdForm, setPwdForm] = useState({ current: '', newPwd: '', confirm: '' });
+    const [pwdError, setPwdError] = useState('');
+    const [pwdLoading, setPwdLoading] = useState(false);
 
-const POMPES_INIT = [
-    { pompe_id: 1, nom_pompe: 'P-HayMohammadi-01', quartier: 'Hay Mohammadi', statut: 'ACTIVE', debit_max_Lmin: 1800, debit_actuel: 1200, automatique: true },
-    { pompe_id: 2, nom_pompe: 'P-HayMohammadi-02', quartier: 'Hay Mohammadi', statut: 'INACTIVE', debit_max_Lmin: 1500, debit_actuel: 0, automatique: true },
-    { pompe_id: 3, nom_pompe: 'P-Talborjt-01', quartier: 'Talborjt', statut: 'INACTIVE', debit_max_Lmin: 1200, debit_actuel: 0, automatique: true },
-    { pompe_id: 4, nom_pompe: 'P-Bensergao-01', quartier: 'Bensergao', statut: 'INACTIVE', debit_max_Lmin: 900, debit_actuel: 0, automatique: true },
-    { pompe_id: 5, nom_pompe: 'P-Anza-01', quartier: 'Anza', statut: 'ACTIVE', debit_max_Lmin: 2500, debit_actuel: 2300, automatique: true },
-    { pompe_id: 6, nom_pompe: 'P-Anza-02', quartier: 'Anza', statut: 'PANNE', debit_max_Lmin: 2000, debit_actuel: 0, automatique: false },
-    { pompe_id: 7, nom_pompe: 'P-AlMassira-01', quartier: 'Al Massira', statut: 'ACTIVE', debit_max_Lmin: 1300, debit_actuel: 870, automatique: true },
-    { pompe_id: 8, nom_pompe: 'P-Tilila-01', quartier: 'Tilila', statut: 'ACTIVE', debit_max_Lmin: 1600, debit_actuel: 1100, automatique: true },
-]
+    const storedUser = userProp || getStoredUser();
+    const role = storedUser.role || 'LECTEUR';
+    const isAdmin = role === 'ADMIN';
+    const canEdit = role === 'ADMIN' || role === 'OPERATEUR';
+    const initials = storedUser.nom ? storedUser.nom.substring(0, 2).toUpperCase() : 'U';
 
-const RISK = {
-    CRITIQUE: { color: '#dc2626', lightBg: '#fef2f2', border: '#fca5a5', label: 'CRITIQUE' },
-    ELEVE: { color: '#ea580c', lightBg: '#fff7ed', border: '#fdba74', label: 'ÉLEVÉ' },
-    MOYEN: { color: '#d97706', lightBg: '#fffbeb', border: '#fcd34d', label: 'MOYEN' },
-    FAIBLE: { color: '#16a34a', lightBg: '#f0fdf4', border: '#86efac', label: 'FAIBLE' },
-}
-
-// ─── COMPOSANT PRINCIPAL ──────────────────────────────────────────────────
-export default function Dashboard() {
-    const [dark, setDark] = useState(false)
-    const [zones] = useState(ZONES_INIT)
-    const [alertes, setAlertes] = useState(ALERTES_INIT)
-    const [pompes, setPompes] = useState(POMPES_INIT)
-    const [selectedZone, setSelectedZone] = useState(null)
-    const [tab, setTab] = useState('carte')
-    const [now, setNow] = useState(new Date())
-    const [menuOpen, setMenuOpen] = useState(false)
-    const [modal, setModal] = useState(null)
-    const [editNom, setEditNom] = useState('BELAAJIN Abdelaali')
-    const [editEmail, setEditEmail] = useState('admin@urba-drain.ma')
-    const [editRole] = useState('ADMIN')
-    const [pwOld, setPwOld] = useState('')
-    const [pwNew, setPwNew] = useState('')
-    const [pwConfirm, setPwConfirm] = useState('')
-    const [toast, setToast] = useState(null)
-
-    // FIX P4: rôle lu depuis localStorage
-    const storedUser = getStoredUser()
-    const role = storedUser.role || 'ADMIN' // fallback ADMIN pour démo sans auth
+    const [zones, setZones] = useState([]);
+    const [alertes, setAlertes] = useState([]);
+    const [pompes, setPompes] = useState([]);
+    const [capteurs, setCapteurs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [toast, setToast] = useState(null);
+    const [selectedZone, setSelectedZone] = useState(null);
 
     const showToast = (msg, type = 'success') => {
-        setToast({ msg, type })
-        setTimeout(() => setToast(null), 3000)
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3000);
     }
 
-    useEffect(() => {
-        const close = (e) => { if (!e.target.closest('#user-menu-root')) setMenuOpen(false) }
-        document.addEventListener('mousedown', close)
-        return () => document.removeEventListener('mousedown', close)
-    }, [])
+    const fetchData = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
+        // Si on était en erreur, on indique qu'on tente de se reconnecter
+        setApiStatus(prev => prev === 'error' ? 'reconnecting' : prev);
+
+        try {
+            const [zRes, aRes, pRes, cRes] = await Promise.all([
+                getZones(),
+                getAlertes(),
+                getPompes(),
+                getCapteurs()
+            ]);
+            if (zRes) setZones(zRes);
+            if (aRes) setAlertes(aRes);
+            if (pRes) setPompes(pRes);
+            if (cRes) setCapteurs(cRes);
+            
+            setApiStatus('connected');
+            setError(null);
+        } catch (err) {
+            setApiStatus('error');
+            setError('Erreur de connexion API. Nouvelle tentative...');
+        } finally {
+            if (!silent) setLoading(false);
+        }
+    }, [apiStatus])
+
+    // Fetch unread messages count
+    const fetchUnread = useCallback(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:5000/messages', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setUnreadMessages(data.filter(m => !m.lu).length);
+            }
+        } catch {}
+    }, []);
 
     useEffect(() => {
-        const t = setInterval(() => setNow(new Date()), 30000)
-        return () => clearInterval(t)
-    }, [])
+        fetchData();
+        fetchUnread();
+        
+        // Rafraîchir toutes les 5 secondes
+        const refreshInterval = setInterval(() => { fetchData(true); fetchUnread(); }, 5000);
+        const clockInterval = setInterval(() => setNow(new Date()), 1000);
+        const closeMenu = (e) => { if (!e.target.closest('#user-menu-root')) setMenuOpen(false) }
+        document.addEventListener('mousedown', closeMenu)
+        return () => {
+            clearInterval(refreshInterval);
+            clearInterval(clockInterval);
+            document.removeEventListener('mousedown', closeMenu);
+        }
+    }, [fetchData, fetchUnread])
 
-    // FIX P1: KPIs CALCULÉS, jamais stockés dans un useState
     const stats = useMemo(() => ({
-        alertesActives: alertes.filter(a => !a.resolue).length,
+        alertesActives: alertes.filter(a => a.resolue === false).length,
         pompesActives: pompes.filter(p => p.statut === 'ACTIVE').length,
-        zonesCritiques: zones.filter(z => ['CRITIQUE', 'ELEVE'].includes(z.niveau_risque)).length,
-        pannes: pompes.filter(p => p.statut === 'PANNE').length,
-    }), [alertes, pompes, zones])
+        zonesARisque: zones.filter(z => z.niveau_risque !== 'FAIBLE').length,
+        pannes: pompes.filter(p => p.statut === 'PANNE').length + capteurs.filter(c => c.statut === 'PANNE').length,
+        totalEquipements: pompes.length + capteurs.length
+    }), [alertes, pompes, capteurs, zones]);
 
-    // FIX P2: nb_alertes calculé dynamiquement par zone_id
-    const nbAlertesZone = useCallback((zoneId) =>
-        alertes.filter(a => a.zone_id === zoneId && !a.resolue).length
-        , [alertes])
+    const initialStatsRef = useRef(null);
 
-    // FIX P2: zones enrichies avec nb_alertes calculé (passées aux enfants)
-    const zonesWithAlerts = useMemo(() =>
-        zones.map(z => ({ ...z, nb_alertes: nbAlertesZone(z.zone_id) }))
-        , [zones, nbAlertesZone])
+    const trendStats = useMemo(() => {
+        if (!initialStatsRef.current && !loading) {
+            initialStatsRef.current = stats;
+        }
+        
+        const dict = {
+            alertesActives: { trend: 'up', trendValue: 0 },
+            pompesActives: { trend: 'up', trendValue: 0 },
+            zonesARisque: { trend: 'up', trendValue: 0 },
+            pannes: { trend: 'up', trendValue: 0 }
+        };
 
-    // ── Actions ─────────────────────────────────────────────────────────
-    const updatePompe = useCallback((id, updates) => {
-        setPompes(prev => prev.map(p => p.pompe_id !== id ? p : { ...p, ...updates }))
-    }, [])
+        if (initialStatsRef.current) {
+            ['alertesActives', 'pompesActives', 'zonesARisque', 'pannes'].forEach(key => {
+                const current = stats[key] || 0;
+                
+                // BUSINESS RULE: For 'pannes', we want a saturation rate (pannes/total), not an evolution.
+                if (key === 'pannes') {
+                    const total = stats.totalEquipements || 1;
+                    dict[key] = { 
+                        trend: current > 0 ? 'up' : 'down', 
+                        trendValue: Math.round((current / total) * 100) 
+                    };
+                    return;
+                }
 
-    const resolveAlert = useCallback((id) => {
-        setAlertes(prev => prev.map(a => a.alerte_id !== id ? a : { ...a, resolue: true }))
-    }, [])
+                const init = initialStatsRef.current[key] || 0;
+                let trend = current >= init ? 'up' : 'down';
+                let trendValue = 0;
+                if (init === 0) {
+                    trendValue = current > 0 ? 100 : 0;
+                } else {
+                    trendValue = Math.abs(Math.round(((current - init) / init) * 100));
+                }
+                dict[key] = { trend, trendValue };
+            });
+        }
+        return dict;
+    }, [stats, loading]);
 
-    const handleRefreshAlerts = useCallback(() => {
-        showToast('Données rafraîchies avec succès', 'success')
-    }, [])
 
-    // FIX P3: callback pour ajouter les alertes de simulation (max 12 dans l'UI)
-    const addSimAlertes = useCallback((newAlertes) => {
-        setAlertes(prev => [...newAlertes.slice(0, 12), ...prev])
-    }, [])
+    const zonesWithAlerts = useMemo(() => zones.map(z => ({
+        ...z,
+        nb_alertes: alertes.filter(a => a.zone_id === z.zone_id && a.resolue === false).length,
+        nb_pompes_actives: pompes.filter(p => p.zone_id === z.zone_id && p.statut === 'ACTIVE').length
+    })), [zones, alertes, pompes]);
 
-    // FIX P3: callback pour réinitialiser — supprime toutes les alertes "SIM ORAGE"
-    const removeSimAlertes = useCallback(() => {
-        setAlertes(prev => prev.filter(a => !a.message?.startsWith('SIM ORAGE')))
-    }, [])
+    const resolveAlert = useCallback(async (id) => {
+        try {
+            await apiResolveAlerte(id);
+            setAlertes(prev => prev.map(a => a.alerte_id === id ? { ...a, resolue: true } : a));
+            showToast('Alerte résolue avec succès', 'success');
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Erreur lors de la résolution', 'error');
+        }
+    }, []);
 
-    // ── THÈME ─────────────────────────────────────────────────────────────
-    const T = {
-        bg: dark ? '#0f172a' : '#f1f5f9',
-        surface: dark ? '#1e293b' : '#ffffff',
-        surface2: dark ? '#273449' : '#f8fafc',
-        border: dark ? '#334155' : '#e2e8f0',
-        text: dark ? '#f1f5f9' : '#0f172a',
-        textSub: dark ? '#94a3b8' : '#64748b',
-        textMut: dark ? '#475569' : '#94a3b8',
-        accent: '#1d4ed8',
-        accentBg: dark ? 'rgba(29,78,216,.15)' : '#eff6ff',
-        accentBd: dark ? 'rgba(29,78,216,.35)' : '#bfdbfe',
-        shadow: dark ? '0 1px 3px rgba(0,0,0,.5)' : '0 1px 3px rgba(0,0,0,.08)',
-    }
+    const updatePompe = useCallback(async (id, updates) => {
+        if (updates.statut) {
+            try {
+                const data = await apiTogglePompe(id);
+                setPompes(prev => prev.map(p => p.pompe_id === id ? data : p));
+                showToast(`Pompe ${data.nom_pompe} modifiée`, 'success');
+            } catch (err) {
+                showToast(err.response?.data?.error || 'Erreur modification pompe', 'error');
+            }
+        }
+    }, []);
 
-    // FIX P4: onglet Administration masqué si rôle ≠ ADMIN
+    const handleSimulationComplete = useCallback(() => {
+        showToast('Simulation terminée, synchronisation en cours...', 'info');
+        fetchData();
+    }, [fetchData]);
+
+    const handleLogout = async () => {
+        try { await apiLogout(); } catch(e) {}
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('role');
+        window.location.reload();
+    };
+
+    const handleChangePassword = async () => {
+        if (pwdForm.newPwd !== pwdForm.confirm) { setPwdError('Les mots de passe ne correspondent pas'); return; }
+        if (pwdForm.newPwd.length < 8) { setPwdError('Minimum 8 caractères'); return; }
+        setPwdLoading(true);
+        setPwdError('');
+        try {
+            await changePassword({ current_password: pwdForm.current, new_password: pwdForm.newPwd });
+            setShowPasswordModal(false);
+            setPwdForm({ current: '', newPwd: '', confirm: '' });
+            showToast('Mot de passe mis à jour ✓', 'success');
+        } catch (err) {
+            setPwdError(err.response?.data?.error || 'Erreur lors de la mise à jour');
+        } finally {
+            setPwdLoading(false);
+        }
+    };
+
     const NAV = [
-        { id: 'carte', label: 'Tableau de bord', icon: '⊞' },
-        { id: 'alertes', label: 'Alertes', icon: '⚠' },
-        { id: 'pompes', label: 'Équipements', icon: '⚙' },
-        ...(role === 'ADMIN' ? [{ id: 'admin', label: 'Administration', icon: '👥' }] : []),
-        { id: 'sim', label: 'Simulation', icon: '🌧' },
-    ]
+        { id: 'carte', label: "Vue d'ensemble", icon: <LayoutDashboard size={20} /> },
+        { id: 'alertes', label: 'Alertes', icon: <AlertTriangle size={20} /> },
+        { id: 'pompes', label: 'Équipements', icon: <Settings2 size={20} /> },
+        { id: 'messages', label: 'Messagerie', icon: <MessageSquare size={20} />, badge: unreadMessages },
+        ...(isAdmin ? [{ id: 'admin', label: 'Administration', icon: <ShieldCheck size={20} /> }] : []),
+        ...(isAdmin ? [{ id: 'sim', label: 'Simulation', icon: <CloudRain size={20} /> }] : []),
+    ];
+
+    if (loading) return (
+        <div style={{ minHeight: '100vh', background: '#060d1a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f1f5f9' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '3px solid rgba(59,130,246,0.3)', borderTopColor: '#3b82f6', animation: 'spin 1s linear infinite' }} />
+                <div style={{ fontSize: '15px', fontWeight: '500', color: '#94a3b8' }}>Initialisation du tableau de bord...</div>
+            </div>
+        </div>
+    );
 
     return (
-        <>
-            <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', system-ui, sans-serif; background: ${T.bg}; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 99px; }
-        .row-hover { transition: all 0.2s ease; }
-        .row-hover:hover { background: ${dark ? 'rgba(255,255,255,.03)' : 'rgba(0,0,0,.02)'} !important; }
-        .row-hover:active { transform: scale(0.995); }
-        .nav-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline: none; }
-        .nav-btn:hover { background: ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)'} !important; transform: translateY(-1px); }
-        .nav-btn:active { transform: translateY(1px) scale(0.96); }
-        .action-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline: none; }
-        .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); filter: brightness(1.05); }
-        .action-btn:active { transform: translateY(1px) scale(0.97); box-shadow: none; filter: brightness(0.95); }
-        .menu-item { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline: none; }
-        .menu-item:hover { background: ${dark ? 'rgba(255,255,255,.1)' : '#f1f5f9'} !important; padding-left: 14px !important; }
-        .menu-item:active { transform: scale(0.98); }
-        .menu-item-danger { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline: none; }
-        .menu-item-danger:hover { background: ${dark ? 'rgba(220,38,38,.15)' : '#fef2f2'} !important; padding-left: 14px !important; }
-        .menu-item-danger:active { transform: scale(0.98); }
-        .avatar-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
-        .avatar-btn:hover { transform: scale(1.05); box-shadow: 0 4px 14px rgba(29,78,216,.5); }
-        .avatar-btn:active { transform: scale(0.95); box-shadow: 0 2px 8px rgba(29,78,216,.4); }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
-        @keyframes blink  { 0%,100%{opacity:1} 50%{opacity:.3} }
-        @keyframes spin   { to { transform:rotate(360deg) } }
-        .fade { animation: fadeUp .25s ease; }
-      `}</style>
+        <div style={{ display: 'flex', minHeight: '100vh', background: '#060d1a', color: '#f1f5f9', overflow: 'hidden', fontFamily: "'Inter', sans-serif" }}>
 
-            <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'Inter',sans-serif", fontSize: '14px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', background: 'radial-gradient(circle at top right, rgba(59,130,246,0.05) 0%, transparent 50%), radial-gradient(circle at bottom left, rgba(139,92,246,0.05) 0%, transparent 50%)' }} />
 
-                {/* ══ HEADER ════════════════════════════════════════════════ */}
-                <header style={{
-                    background: T.surface, borderBottom: `1px solid ${T.border}`,
-                    padding: '0 24px', height: '64px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    position: 'sticky', top: 0, zIndex: 300, boxShadow: T.shadow,
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
-                        <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', boxShadow: '0 2px 10px rgba(29,78,216,.3)', flexShrink: 0 }}>🌊</div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', whiteSpace: 'nowrap' }}>
-                            <span style={{ fontWeight: '700', fontSize: '18px', letterSpacing: '-.01em', color: T.text }}>Urba-Drain</span>
-                            <span style={{ fontSize: '13px', color: T.textSub, letterSpacing: '.02em', fontWeight: '500' }}>Agadir · Gestion réseau pluvial</span>
-                        </div>
+            {/* Sidebar */}
+            <aside style={{ width: sidebarOpen ? '240px' : '72px', background: 'rgba(12,20,38,0.7)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.07)', transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 40 }}>
+                <div style={{ height: '72px', display: 'flex', alignItems: 'center', padding: sidebarOpen ? '0 20px' : '0 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', gap: '12px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(59,130,246,0.3)', flexShrink: 0 }}>
+                        <Droplets size={24} color="white" />
                     </div>
+                    {sidebarOpen && (
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: '800', fontSize: '18px', letterSpacing: '-0.02em', color: '#f1f5f9' }}>Urba-Drain</span>
+                            <span style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agadir</span>
+                        </div>
+                    )}
+                </div>
 
-                    <nav style={{ display: 'flex', gap: '8px', flex: 1, justifyContent: 'center', overflowX: 'auto', padding: '0 16px' }}>
-                        {NAV.map(n => (
-                            <button key={n.id} className="nav-btn" onClick={() => setTab(n.id)} style={{
-                                padding: '8px 16px', borderRadius: '8px', border: 'none', fontFamily: 'inherit',
-                                background: tab === n.id ? T.accentBg : 'transparent',
-                                color: tab === n.id ? T.accent : T.textSub,
-                                fontWeight: tab === n.id ? '600' : '500',
-                                fontSize: '14px', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                transition: 'all .2s ease', whiteSpace: 'nowrap', flexShrink: 0
-                            }}>
-                                <span style={{ fontSize: '16px', opacity: tab === n.id ? 1 : 0.8 }}>{n.icon}</span>
-                                {n.label}
-                                {n.id === 'alertes' && stats.alertesActives > 0 && (
-                                    <span style={{ padding: '2px 8px', borderRadius: '99px', background: '#ef4444', color: 'white', fontSize: '11px', fontWeight: '700', marginLeft: '4px', boxShadow: '0 2px 6px rgba(239,68,68,0.3)' }}>
-                                        {stats.alertesActives}
-                                    </span>
+                <nav style={{ flex: 1, padding: '24px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {NAV.map(n => {
+                        const active = tab === n.id;
+                        return (
+                            <button key={n.id} onClick={() => { setTab(n.id); if (n.id === 'messages') fetchUnread(); }} title={!sidebarOpen ? n.label : ''} style={{ padding: sidebarOpen ? '12px 14px' : '12px', borderRadius: '10px', border: 'none', background: active ? 'rgba(59,130,246,0.1)' : 'transparent', color: active ? '#3b82f6' : '#94a3b8', fontWeight: active ? '600' : '500', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: sidebarOpen ? '14px' : '0', justifyContent: sidebarOpen ? 'flex-start' : 'center', transition: 'all 0.2s ease', position: 'relative' }}>
+                                <span style={{ opacity: active ? 1 : 0.7, position: 'relative' }}>
+                                    {n.icon}
+                                    {/* Badge non lus sur icône quand sidebar fermée */}
+                                    {!sidebarOpen && n.badge > 0 && (
+                                        <span style={{ position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', background: '#ef4444', color: 'white', borderRadius: '50%', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{n.badge}</span>
+                                    )}
+                                </span>
+                                {sidebarOpen && <span>{n.label}</span>}
+                                {active && <div style={{ position: 'absolute', left: '-12px', top: '50%', transform: 'translateY(-50%)', width: '4px', height: '20px', background: '#3b82f6', borderRadius: '0 4px 4px 0' }} />}
+                                {/* Badges sidebar ouverte */}
+                                {sidebarOpen && n.id === 'alertes' && stats.alertesActives > 0 && (
+                                    <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: '99px', background: '#ef4444', color: 'white', fontSize: '11px', fontWeight: '700', boxShadow: '0 2px 8px rgba(239,68,68,0.4)' }}>{stats.alertesActives}</span>
+                                )}
+                                {sidebarOpen && n.id === 'messages' && unreadMessages > 0 && (
+                                    <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: '99px', background: '#3b82f6', color: 'white', fontSize: '11px', fontWeight: '700', boxShadow: '0 2px 8px rgba(59,130,246,0.4)' }}>{unreadMessages}</span>
                                 )}
                             </button>
-                        ))}
-                    </nav>
+                        );
+                    })}
+                </nav>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#16a34a', fontWeight: '500' }}>
-                            <div style={{ width: '7px', height: '7px', background: '#16a34a', borderRadius: '50%', animation: 'blink 2s ease-in-out infinite' }} />
-                            EN LIGNE
-                        </div>
-
-                        {stats.alertesActives > 0 && (
-                            <div style={{ padding: '4px 10px', background: dark ? 'rgba(220,38,38,.15)' : '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', fontSize: '12px', color: '#dc2626', fontWeight: '600' }}>
-                                ⚠ {stats.alertesActives} alerte{stats.alertesActives > 1 ? 's' : ''}
+                <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59,130,246,0.2)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', flexShrink: 0 }}>{initials}</div>
+                        {sidebarOpen && (
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{storedUser.nom}</div>
+                                <div style={{ display: 'inline-block', marginTop: '3px', fontSize: '10px', fontWeight: '700', letterSpacing: '0.05em', padding: '2px 8px', borderRadius: '99px', background: isAdmin ? 'rgba(139,92,246,0.15)' : canEdit ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.06)', color: isAdmin ? '#a78bfa' : canEdit ? '#3b82f6' : '#94a3b8', border: `1px solid ${isAdmin ? 'rgba(139,92,246,0.3)' : canEdit ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)'}` }}>{role}</div>
                             </div>
                         )}
+                    </div>
+                </div>
+            </aside>
 
-                        <button className="nav-btn" onClick={() => setDark(!dark)} style={{ padding: '6px 13px', borderRadius: '6px', border: `1px solid ${T.border}`, background: 'transparent', color: T.textSub, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {dark ? '☀ Mode clair' : '☾ Mode sombre'}
+            {/* Main */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative', zIndex: 10 }}>
+                <header style={{ height: '72px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(12,20,38,0.4)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.04)', position: 'sticky', top: 0, zIndex: 30 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '8px' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                            <Menu size={22} />
                         </button>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '13px', fontWeight: '500', background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: '99px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <Clock size={14} />
+                            {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </div>
+
+                        <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            fontSize: '12px', 
+                            color: apiStatus === 'connected' ? '#22c55e' : apiStatus === 'reconnecting' ? '#f59e0b' : '#ef4444', 
+                            fontWeight: '600', 
+                            padding: '6px 12px', 
+                            background: apiStatus === 'connected' ? 'rgba(34,197,94,0.1)' : apiStatus === 'reconnecting' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)', 
+                            borderRadius: '99px', 
+                            border: `1px solid ${apiStatus === 'connected' ? 'rgba(34,197,94,0.2)' : apiStatus === 'reconnecting' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'}` 
+                        }}>
+                            <div style={{ 
+                                width: '6px', 
+                                height: '6px', 
+                                background: apiStatus === 'connected' ? '#22c55e' : apiStatus === 'reconnecting' ? '#f59e0b' : '#ef4444', 
+                                borderRadius: '50%', 
+                                boxShadow: apiStatus === 'connected' ? '0 0 8px #22c55e' : 'none', 
+                                animation: (apiStatus === 'connected' || apiStatus === 'reconnecting') ? 'pulse 2s infinite' : 'none' 
+                            }} />
+                            {apiStatus === 'connected' ? 'API CONNECTÉE' : apiStatus === 'reconnecting' ? 'RECONNEXION...' : 'API INDISPONIBLE'}
+                        </div>
 
                         <div id="user-menu-root" style={{ position: 'relative' }}>
-                            <div className="avatar-btn" onClick={() => setMenuOpen(o => !o)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '14px', cursor: 'pointer', border: menuOpen ? '2px solid #60a5fa' : '2px solid transparent', boxShadow: '0 2px 8px rgba(29,78,216,.4)' }}>A</div>
-
+                            <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                <Settings2 size={22} />
+                            </button>
                             {menuOpen && (
-                                <div style={{ position: 'absolute', top: '44px', right: 0, width: '240px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,.2)', zIndex: 500, overflow: 'hidden', animation: 'fadeUp .18s ease' }}>
-                                    <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.border}`, background: T.surface2 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '15px', flexShrink: 0 }}>A</div>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontWeight: '600', fontSize: '13px', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{editNom}</div>
-                                                <div style={{ fontSize: '11px', color: T.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{editEmail}</div>
-                                                <span style={{ display: 'inline-block', marginTop: '3px', padding: '1px 7px', borderRadius: '99px', fontSize: '10px', fontWeight: '600', background: dark ? 'rgba(124,58,237,.15)' : '#f5f3ff', color: '#7c3aed', border: '1px solid rgba(124,58,237,.25)' }}>{editRole}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style={{ padding: '6px' }}>
-                                        {[
-                                            { icon: '👤', label: 'Mon profil', action: () => { setModal('profil'); setMenuOpen(false) } },
-                                            { icon: '🔑', label: 'Changer mot de passe', action: () => { setModal('password'); setMenuOpen(false) } },
-                                            ...(role === 'ADMIN' ? [{ icon: '⚙', label: 'Administration', action: () => { setTab('admin'); setMenuOpen(false) } }] : []),
-                                        ].map(item => (
-                                            <button key={item.label} className="menu-item" onClick={item.action} style={{ width: '100%', padding: '9px 10px', borderRadius: '7px', border: 'none', background: 'transparent', color: T.text, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left' }}>
-                                                <span style={{ fontSize: '15px', width: '20px', textAlign: 'center' }}>{item.icon}</span>
-                                                {item.label}
-                                            </button>
-                                        ))}
-                                        <div style={{ height: '1px', background: T.border, margin: '6px 4px' }} />
-                                        <button className="menu-item-danger" onClick={() => { setModal('delete'); setMenuOpen(false) }} style={{ width: '100%', padding: '9px 10px', borderRadius: '7px', border: 'none', background: 'transparent', color: '#dc2626', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left' }}>
-                                            <span style={{ fontSize: '15px', width: '20px', textAlign: 'center' }}>🗑</span>
-                                            Supprimer le compte
-                                        </button>
-                                        <div style={{ height: '1px', background: T.border, margin: '6px 4px' }} />
-                                        {/* FIX P5: Déconnexion correcte — vide localStorage et redirige */}
-                                        <button className="menu-item" onClick={() => {
-                                            localStorage.removeItem('token')
-                                            localStorage.removeItem('user')
-                                            showToast('Déconnexion…', 'info')
-                                            setTimeout(() => { window.location.href = '/login' }, 800)
-                                        }} style={{ width: '100%', padding: '9px 10px', borderRadius: '7px', border: 'none', background: 'transparent', color: T.textSub, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left' }}>
-                                            <span style={{ fontSize: '15px', width: '20px', textAlign: 'center' }}>↩</span>
-                                            Déconnexion
-                                        </button>
-                                    </div>
+                                <div style={{ position: 'absolute', top: '40px', right: 0, width: '220px', background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', overflow: 'hidden', padding: '8px', transformOrigin: 'top right', animation: 'scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                                    <button onClick={() => { setMenuOpen(false); setShowPasswordModal(true); setPwdError(''); setPwdForm({ current: '', newPwd: '', confirm: '' }); }} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#f1f5f9', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', textAlign: 'left' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                                        <Lock size={16} /> Changer mot de passe
+                                    </button>
+                                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '4px 0' }} />
+                                    <button onClick={handleLogout} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#ef4444', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', textAlign: 'left' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                                        <LogOut size={16} /> Déconnexion
+                                    </button>
                                 </div>
                             )}
                         </div>
                     </div>
                 </header>
 
-                {/* ══ MODALS ════════════════════════════════════════════════ */}
-                {modal && (
-                    <div onClick={() => setModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                        <div onClick={e => e.stopPropagation()} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '14px', width: '100%', maxWidth: '420px', boxShadow: '0 16px 48px rgba(0,0,0,.25)', animation: 'fadeUp .2s ease' }}>
-
-                            {modal === 'profil' && (
-                                <>
-                                    <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontWeight: '700', fontSize: '15px', color: T.text }}>👤 Mon profil</span>
-                                        <button className="action-btn" onClick={() => setModal(null)} style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMut, cursor: 'pointer', fontSize: '20px' }}>×</button>
-                                    </div>
-                                    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                        <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-                                            <div style={{ width: '64px', height: '64px', borderRadius: '50%', margin: '0 auto', background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '24px', boxShadow: '0 4px 14px rgba(29,78,216,.4)' }}>A</div>
-                                        </div>
-                                        {[{ label: 'Nom complet', val: editNom, set: setEditNom, type: 'text' }, { label: 'Email', val: editEmail, set: setEditEmail, type: 'email' }].map(f => (
-                                            <div key={f.label}>
-                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: T.textSub, marginBottom: '5px' }}>{f.label}</label>
-                                                <input type={f.type} value={f.val} onChange={e => f.set(e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} onFocus={e => e.target.style.borderColor = '#1d4ed8'} onBlur={e => e.target.style.borderColor = T.border} />
-                                            </div>
-                                        ))}
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                            <button className="action-btn" onClick={() => setModal(null)} style={{ flex: 1, padding: '9px', borderRadius: '7px', border: `1px solid ${T.border}`, background: 'transparent', color: T.textSub, fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-                                            <button className="action-btn" onClick={() => { setModal(null); showToast('Profil mis à jour ✓') }} style={{ flex: 1, padding: '9px', borderRadius: '7px', border: 'none', background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', color: 'white', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>Enregistrer</button>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {modal === 'password' && (
-                                <>
-                                    <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontWeight: '700', fontSize: '15px', color: T.text }}>🔑 Changer le mot de passe</span>
-                                        <button className="action-btn" onClick={() => setModal(null)} style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMut, cursor: 'pointer', fontSize: '20px' }}>×</button>
-                                    </div>
-                                    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                        {[{ label: 'Mot de passe actuel', val: pwOld, set: setPwOld }, { label: 'Nouveau mot de passe', val: pwNew, set: setPwNew }, { label: 'Confirmer le nouveau', val: pwConfirm, set: setPwConfirm }].map(f => (
-                                            <div key={f.label}>
-                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: T.textSub, marginBottom: '5px' }}>{f.label}</label>
-                                                <input type="password" value={f.val} onChange={e => f.set(e.target.value)} placeholder="••••••••" style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} onFocus={e => e.target.style.borderColor = '#1d4ed8'} onBlur={e => e.target.style.borderColor = T.border} />
-                                            </div>
-                                        ))}
-                                        {pwNew && pwConfirm && pwNew !== pwConfirm && (
-                                            <div style={{ padding: '8px 12px', borderRadius: '7px', background: dark ? 'rgba(220,38,38,.1)' : '#fef2f2', border: '1px solid #fca5a5', fontSize: '12px', color: '#dc2626' }}>⚠ Les mots de passe ne correspondent pas</div>
-                                        )}
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                            <button className="action-btn" onClick={() => setModal(null)} style={{ flex: 1, padding: '9px', borderRadius: '7px', border: `1px solid ${T.border}`, background: 'transparent', color: T.textSub, fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-                                            <button disabled={!pwOld || !pwNew || pwNew !== pwConfirm} onClick={() => { setPwOld(''); setPwNew(''); setPwConfirm(''); setModal(null); showToast('Mot de passe modifié ✓') }} style={{ flex: 1, padding: '9px', borderRadius: '7px', border: 'none', background: (!pwOld || !pwNew || pwNew !== pwConfirm) ? '#94a3b8' : 'linear-gradient(135deg,#1d4ed8,#1e40af)', color: 'white', fontSize: '13px', fontWeight: '600', cursor: (!pwOld || !pwNew || pwNew !== pwConfirm) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>Confirmer</button>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {modal === 'delete' && (
-                                <>
-                                    <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontWeight: '700', fontSize: '15px', color: '#dc2626' }}>🗑 Supprimer le compte</span>
-                                        <button className="action-btn" onClick={() => setModal(null)} style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMut, cursor: 'pointer', fontSize: '20px' }}>×</button>
-                                    </div>
-                                    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                        <div style={{ padding: '14px', borderRadius: '8px', background: dark ? 'rgba(220,38,38,.1)' : '#fef2f2', border: '1px solid #fca5a5' }}>
-                                            <div style={{ fontWeight: '600', color: '#dc2626', marginBottom: '6px' }}>⚠ Action irréversible</div>
-                                            <div style={{ fontSize: '13px', color: T.textSub, lineHeight: '1.6' }}>La suppression de ce compte effacera définitivement toutes vos données. Cette action ne peut pas être annulée.</div>
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: T.textSub, marginBottom: '5px' }}>Tapez <strong style={{ color: '#dc2626' }}>SUPPRIMER</strong> pour confirmer</label>
-                                            <input type="text" placeholder="SUPPRIMER" id="delete-confirm-input" style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', border: '1px solid #fca5a5', background: T.surface, color: T.text, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button className="action-btn" onClick={() => setModal(null)} style={{ flex: 1, padding: '9px', borderRadius: '7px', border: `1px solid ${T.border}`, background: 'transparent', color: T.textSub, fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-                                            <button className="action-btn" onClick={() => { const val = document.getElementById('delete-confirm-input')?.value; if (val === 'SUPPRIMER') { setModal(null); showToast('Compte supprimé', 'error') } else showToast('Tapez exactement SUPPRIMER', 'error') }} style={{ flex: 1, padding: '9px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>Supprimer définitivement</button>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* ══ TOAST ════════════════════════════════════════════════ */}
-                {toast && (
-                    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 2000, padding: '12px 18px', borderRadius: '10px', background: toast.type === 'error' ? '#dc2626' : toast.type === 'info' ? '#1d4ed8' : '#16a34a', color: 'white', fontSize: '13px', fontWeight: '500', boxShadow: '0 4px 16px rgba(0,0,0,.25)', animation: 'fadeUp .2s ease' }}>
-                        {toast.type === 'error' ? '⚠ ' : toast.type === 'info' ? 'ℹ ' : '✓ '}{toast.msg}
-                    </div>
-                )}
-
-                {/* ══ CONTENU PRINCIPAL ════════════════════════════════════ */}
-                <main style={{ flex: 1, padding: '20px 24px', maxWidth: '1560px', margin: '0 auto', width: '100%' }}>
-
-                    {/* FIX P1: stats calculés passés à StatsBar */}
-                    <StatsBar stats={stats} dark={dark} />
-
-                    {/* ── Tableau de bord ───────────────────────────────── */}
-                    {tab === 'carte' && (
-                        <div className="fade" style={{ display: 'grid', gridTemplateColumns: '1fr 310px', gap: '16px' }}>
-                            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '10px', boxShadow: T.shadow, overflow: 'hidden' }}>
-                                <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: '600', fontSize: '13px' }}>🗺 Carte réseau pluvial — Agadir</span>
-                                    <span style={{ fontSize: '11px', color: T.textMut }}>MAJ {now.toLocaleTimeString('fr-FR')}</span>
-                                </div>
-                                <div style={{ height: '490px' }}>
-                                    {/* FIX P2: zonesWithAlerts (nb_alertes calculé) passé à MapView */}
-                                    <MapView zones={zonesWithAlerts} selectedZone={selectedZone} onSelectZone={setSelectedZone} dark={dark} />
-                                </div>
+                <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
+                    <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <StatsBar stats={stats} trends={trendStats} />
+                        {error && (
+                            <div style={{ padding: '14px 20px', borderRadius: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <AlertTriangle size={18} /> {error}
                             </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                {selectedZone ? (
-                                    <div className="fade" style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '10px', boxShadow: T.shadow, overflow: 'hidden' }}>
-                                        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontWeight: '600', fontSize: '13px' }}>📍 {selectedZone.quartier}</span>
-                                            <button className="action-btn" onClick={() => setSelectedZone(null)} style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: '50%', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMut, cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}>×</button>
-                                        </div>
-                                        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            {(() => { const cfg = RISK[selectedZone.niveau_risque]; return (<span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '99px', background: dark ? `${cfg.color}20` : cfg.lightBg, color: cfg.color, border: `1px solid ${dark ? `${cfg.color}40` : cfg.border}`, fontSize: '11px', fontWeight: '600' }}>{cfg.label}</span>) })()}
-                                            {[
-                                                ['👥 Population', selectedZone.population.toLocaleString() + ' hab.', null],
-                                                ['📐 Superficie', selectedZone.superficie + ' km²', null],
-                                                // FIX P2: nb_alertes calculé dynamiquement
-                                                ['🚨 Alertes', nbAlertesZone(selectedZone.zone_id), nbAlertesZone(selectedZone.zone_id) > 0 ? '#dc2626' : '#16a34a'],
-                                                ['⚙️ Pompes act.', selectedZone.nb_pompes_actives, '#1d4ed8'],
-                                                ['📍 GPS', `${selectedZone.coord_lat.toFixed(4)}, ${selectedZone.coord_lng.toFixed(4)}`, null],
-                                            ].map(([k, v, c]) => (
-                                                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px solid ${T.border}` }}>
-                                                    <span style={{ fontSize: '12px', color: T.textSub }}>{k}</span>
-                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: c || T.text }}>{v}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div style={{ background: T.surface, border: `1px dashed ${T.border}`, borderRadius: '10px', padding: '30px 16px', textAlign: 'center', color: T.textMut, fontSize: '13px' }}>
-                                        <div style={{ fontSize: '30px', marginBottom: '8px' }}>🗺</div>
-                                        Cliquez sur une zone<br />pour voir les détails
-                                    </div>
-                                )}
-
-                                <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '10px', boxShadow: T.shadow, flex: 1, overflow: 'hidden' }}>
-                                    <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, fontWeight: '600', fontSize: '13px', color: T.text }}>
-                                        Toutes les zones ({zones.length})
-                                    </div>
-                                    <div style={{ maxHeight: '270px', overflowY: 'auto' }}>
-                                        {zonesWithAlerts.map(z => {
-                                            const cfg = RISK[z.niveau_risque]
-                                            const sel = selectedZone?.zone_id === z.zone_id
-                                            return (
-                                                <div key={z.zone_id} className="row-hover" onClick={() => setSelectedZone(z)} style={{ padding: '9px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', background: sel ? T.accentBg : 'transparent' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
-                                                        <span style={{ fontSize: '12px', fontWeight: sel ? '600' : '400', color: T.text }}>{z.quartier}</span>
-                                                    </div>
-                                                    {/* FIX P2: badge calculé dynamiquement */}
-                                                    {z.nb_alertes > 0 && (
-                                                        <span style={{ padding: '1px 7px', borderRadius: '99px', background: dark ? 'rgba(220,38,38,.15)' : '#fef2f2', color: '#dc2626', fontSize: '10px', fontWeight: '600', border: '1px solid #fca5a5' }}>⚠ {z.nb_alertes}</span>
-                                                    )}
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
+                        )}
+                        {tab === 'carte' && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '24px', height: 'calc(100vh - 240px)', minHeight: '600px' }}>
+                                <MapView zones={zonesWithAlerts} selectedZone={selectedZone} onSelectZone={setSelectedZone} />
                             </div>
-                        </div>
-                    )}
-
-                    {tab === 'alertes' && (
-                        <div className="fade">
-                            <AlertPanel alertes={alertes} onResolve={resolveAlert} onRefresh={handleRefreshAlerts} dark={dark} />
-                        </div>
-                    )}
-
-                    {tab === 'pompes' && (
-                        <div className="fade">
-                            <PumpControl pompes={pompes} onUpdatePompe={updatePompe} zones={zonesWithAlerts} userRole={role} dark={dark} />
-                        </div>
-                    )}
-
-                    {/* FIX P4: onglet admin conditionnel */}
-                    {tab === 'admin' && role === 'ADMIN' && (
-                        <div className="fade">
-                            <AdminPanel dark={dark} />
-                        </div>
-                    )}
-
-                    {tab === 'sim' && (
-                        <div className="fade">
-                            {/* FIX P3: nouveaux callbacks addSimAlertes / removeSimAlertes */}
-                            <SimOrage
-                                zones={zonesWithAlerts}
-                                stats={stats}
-                                onSimulationComplete={addSimAlertes}
-                                onSimulationReset={removeSimAlertes}
-                                dark={dark}
-                            />
-                        </div>
-                    )}
+                        )}
+                        {tab === 'alertes' && <AlertPanel alertes={alertes} onResolve={resolveAlert} onRefresh={() => fetchData(true)} />}
+                        {tab === 'pompes' && <PumpControl pompes={pompes} zones={zonesWithAlerts} onUpdatePompe={updatePompe} userRole={role} />}
+                        {tab === 'messages' && <MessagePanel onUnreadChange={setUnreadMessages} />}
+                        {tab === 'admin' && isAdmin && <AdminPanel userRole={role} />}
+                        {tab === 'sim' && isAdmin && <SimOrage zones={zonesWithAlerts} stats={stats} onSimulationComplete={handleSimulationComplete} />}
+                    </div>
                 </main>
-
-                <footer style={{ borderTop: `1px solid ${T.border}`, padding: '10px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: T.textMut, background: T.surface }}>
-                    <span>Urba-Drain Agadir · Équipe Augmenteds · ENSIASD Taroudant · SIBD 2025-2026</span>
-                    <span>Stack : React + Flask + MySQL · IA : Claude (Anthropic) + GitHub Copilot</span>
-                </footer>
             </div>
-        </>
-    )
+
+            {/* Toast */}
+            {toast && (
+                <div style={{ position: 'fixed', bottom: '32px', right: '32px', zIndex: 9999, padding: '16px 20px', borderRadius: '14px', background: toast.type === 'error' ? 'rgba(239,68,68,0.95)' : toast.type === 'info' ? 'rgba(59,130,246,0.95)' : 'rgba(34,197,94,0.95)', backdropFilter: 'blur(10px)', color: 'white', fontSize: '14px', fontWeight: '600', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '12px', animation: 'slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    {toast.type === 'error' ? <AlertTriangle size={18} /> : toast.type === 'info' ? <Settings2 size={18} /> : <ShieldCheck size={18} />}
+                    {toast.msg}
+                </div>
+            )}
+
+            {/* Modal Mot de Passe */}
+            {showPasswordModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(6,13,26,0.85)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowPasswordModal(false)}>
+                    <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', width: '100%', maxWidth: '420px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)', overflow: 'hidden', animation: 'scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Lock size={18} color="#3b82f6" /> Changer mon mot de passe
+                            </h3>
+                            <button onClick={() => setShowPasswordModal(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '22px', lineHeight: 1 }}>×</button>
+                        </div>
+                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {pwdError && <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '13px', fontWeight: '500' }}>{pwdError}</div>}
+                            {[
+                                { key: 'current', label: 'Mot de passe actuel', placeholder: '••••••••' },
+                                { key: 'newPwd', label: 'Nouveau mot de passe', placeholder: 'Minimum 8 caractères' },
+                                { key: 'confirm', label: 'Confirmer le nouveau', placeholder: '••••••••' },
+                            ].map(f => (
+                                <div key={f.key}>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#94a3b8', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{f.label}</label>
+                                    <input type="password" value={pwdForm[f.key]} placeholder={f.placeholder}
+                                        onChange={e => setPwdForm({ ...pwdForm, [f.key]: e.target.value })}
+                                        onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
+                                        style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#f1f5f9', fontSize: '14px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                                        onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'} />
+                                </div>
+                            ))}
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                <button onClick={() => setShowPasswordModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#f1f5f9', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Annuler</button>
+                                <button onClick={handleChangePassword} disabled={pwdLoading || !pwdForm.current || !pwdForm.newPwd || !pwdForm.confirm}
+                                    style={{ flex: 2, padding: '12px', borderRadius: '10px', background: (pwdLoading || !pwdForm.current || !pwdForm.newPwd || !pwdForm.confirm) ? 'rgba(59,130,246,0.3)' : 'linear-gradient(135deg, #3b82f6, #2563eb)', border: 'none', color: 'white', fontSize: '14px', fontWeight: '700', cursor: (pwdLoading || !pwdForm.current || !pwdForm.newPwd || !pwdForm.confirm) ? 'not-allowed' : 'pointer' }}>
+                                    {pwdLoading ? 'Mise à jour...' : 'Mettre à jour'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <style>{`
+                @keyframes pulse { 0% { opacity:1; transform:scale(1); } 50% { opacity:0.6; transform:scale(1.2); } 100% { opacity:1; transform:scale(1); } }
+                @keyframes spin { 100% { transform:rotate(360deg); } }
+                @keyframes scale-in { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+                @keyframes slide-up { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+            `}</style>
+        </div>
+    );
 }

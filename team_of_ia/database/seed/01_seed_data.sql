@@ -15,28 +15,28 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- Source : site officiel agadir.ma
 -- ============================================================
 INSERT INTO ZONE (nom_zone, quartier, superficie_km2, population, coord_lat, coord_lng, niveau_risque, date_creation, actif) VALUES
-('Zone Hay Mohammadi',   'Hay Mohammadi',   3.800, 42000, 30.4350, -9.5650, 'ELEVE',    '2024-01-15', TRUE),
-('Zone Talborjt',        'Talborjt',        2.500, 35000, 30.4250, -9.5950, 'MOYEN',    '2024-01-15', TRUE),
-('Zone Bensergao',       'Bensergao',       8.200, 22000, 30.3950, -9.5750, 'FAIBLE',   '2024-01-15', TRUE),
-('Zone Anza',            'Anza',            6.500, 30000, 30.4650, -9.6450, 'CRITIQUE', '2024-01-15', TRUE),
-('Zone Al Massira',      'Al Massira',      4.100, 48000, 30.4150, -9.5650, 'MOYEN',    '2024-02-01', TRUE),
-('Zone Tilila',          'Tilila',          2.800, 28000, 30.4120, -9.5350, 'ELEVE',    '2024-02-01', TRUE),
-('Zone Adrar',           'Adrar',           3.200, 18000, 30.4150, -9.5150, 'FAIBLE',   '2024-02-01', TRUE),
-('Zone Tikiouine',       'Tikiouine',      12.000, 25000, 30.3850, -9.5300, 'FAIBLE',   '2024-03-01', TRUE),
-('Zone Bensergao Sud',   'Bensergao Sud',   5.500, 15000, 30.3800, -9.5700, 'MOYEN',    '2024-03-01', TRUE),
-('Zone Al Houda',        'Al Houda',        2.200, 20000, 30.4050, -9.5450, 'MOYEN',    '2024-03-01', TRUE),
-('Zone Founty',          'Founty',          3.600, 12000, 30.4000, -9.6000, 'FAIBLE',   '2024-04-01', TRUE),
-('Zone Quartier Suisse', 'Quartier Suisse', 1.800,  8000, 30.4350, -9.6050, 'FAIBLE',   '2024-04-01', TRUE),
-('Zone Dakhla',          'Dakhla',          2.100, 15000, 30.4150, -9.5700, 'MOYEN',    '2024-04-01', TRUE),
-('Zone Les Amicales',    'Les Amicales',    1.500, 12000, 30.4250, -9.5850, 'ELEVE',    '2024-04-01', TRUE),
-('Zone Charaf',          'Charaf',          2.200, 18000, 30.4350, -9.5750, 'FAIBLE',   '2024-04-01', TRUE),
-('Zone Riad Salam',      'Riad Salam',      3.500, 30000, 30.4050, -9.5550, 'MOYEN',    '2024-04-01', TRUE),
-('Zone Illigh',          'Illigh',          4.000,  8000, 30.4450, -9.5700, 'FAIBLE',   '2024-04-01', TRUE),
-('Zone Taddart',         'Taddart',         2.800, 22000, 30.4400, -9.6100, 'CRITIQUE', '2024-04-01', TRUE),
-('Zone Sonaba',          'Sonaba',          3.000, 10000, 30.3950, -9.5800, 'FAIBLE',   '2024-04-01', TRUE),
-('Zone El Khiam',        'El Khiam',        1.800, 25000, 30.4180, -9.5820, 'ELEVE',    '2024-04-01', TRUE),
-('Zone Q. Industriel',   'Quartier Industriel',5.500,5000,30.4220,-9.5720,  'CRITIQUE', '2024-04-01', TRUE),
-('Zone Najah',           'Najah',           2.600, 20000, 30.4020, -9.5650, 'MOYEN',    '2024-04-01', TRUE);
+('Zone Hay Mohammadi',   'Hay Mohammadi',   3.800, 42000, 30.4430, -9.5550, 'ELEVE',    '2024-01-15', TRUE),
+('Zone Talborjt',        'Talborjt',        2.500, 35000, 30.4265, -9.5940, 'MOYEN',    '2024-01-15', TRUE),
+('Zone Bensergao',       'Bensergao',       8.200, 22000, 30.3850, -9.5750, 'FAIBLE',   '2024-01-15', TRUE),
+('Zone Anza',            'Anza',            6.500, 30000, 30.4500, -9.6420, 'CRITIQUE', '2024-01-15', TRUE),
+('Zone Al Massira',      'Al Massira',      4.100, 48000, 30.4100, -9.5550, 'MOYEN',    '2024-02-01', TRUE),
+('Zone Tilila',          'Tilila',          2.800, 28000, 30.4080, -9.5300, 'ELEVE',    '2024-02-01', TRUE),
+('Zone Adrar',           'Adrar',           3.200, 18000, 30.4200, -9.5150, 'FAIBLE',   '2024-02-01', TRUE),
+('Zone Tikiouine',       'Tikiouine',      12.000, 25000, 30.3950, -9.5200, 'FAIBLE',   '2024-03-01', TRUE),
+('Zone Bensergao Sud',   'Bensergao Sud',   5.500, 15000, 30.3700, -9.5750, 'MOYEN',    '2024-03-01', TRUE),
+('Zone Al Houda',        'Al Houda',        2.200, 20000, 30.3950, -9.5450, 'MOYEN',    '2024-03-01', TRUE),
+('Zone Founty',          'Founty',          3.600, 12000, 30.4000, -9.5950, 'FAIBLE',   '2024-04-01', TRUE),
+('Zone Quartier Suisse', 'Quartier Suisse', 1.800,  8000, 30.4290, -9.6020, 'FAIBLE',   '2024-04-01', TRUE),
+('Zone Dakhla',          'Dakhla',          2.100, 15000, 30.4150, -9.5550, 'MOYEN',    '2024-04-01', TRUE),
+('Zone Les Amicales',    'Les Amicales',    1.500, 12000, 30.4300, -9.5850, 'ELEVE',    '2024-04-01', TRUE),
+('Zone Charaf',          'Charaf',          2.200, 18000, 30.4350, -9.5720, 'FAIBLE',   '2024-04-01', TRUE),
+('Zone Riad Salam',      'Riad Salam',      3.500, 30000, 30.4050, -9.5500, 'MOYEN',    '2024-04-01', TRUE),
+('Zone Illigh',          'Illigh',          4.000,  8000, 30.4480, -9.5700, 'FAIBLE',   '2024-04-01', TRUE),
+('Zone Taddart',         'Taddart',         2.800, 22000, 30.4550, -9.6200, 'CRITIQUE', '2024-04-01', TRUE),
+('Zone Sonaba',          'Sonaba',          3.000, 10000, 30.3900, -9.5850, 'FAIBLE',   '2024-04-01', TRUE),
+('Zone El Khiam',        'El Khiam',        1.800, 25000, 30.4180, -9.5650, 'ELEVE',    '2024-04-01', TRUE),
+('Zone Q. Industriel',   'Quartier Industriel',5.500,5000, 30.4180, -9.5850,  'CRITIQUE', '2024-04-01', TRUE),
+('Zone Najah',           'Najah',           2.600, 20000, 30.3980, -9.5550, 'MOYEN',    '2024-04-01', TRUE);
 
 -- ============================================================
 -- 2. POMPES — 13 pompes
@@ -54,8 +54,19 @@ INSERT INTO POMPE (zone_id, nom_pompe, debit_max_Lmin, statut, consommation_kw, 
 (7,  'P-Adrar-01',         800.00, 'INACTIVE', 0.00, 30.4452, -9.5652, TRUE),
 (8,  'P-Tikiouine-01',     700.00, 'INACTIVE', 0.00, 30.3702, -9.5402, TRUE),
 (10, 'P-AlHouda-01',      1100.00, 'INACTIVE', 0.00, 30.4152, -9.5782, TRUE),
-(11, 'P-Founty-01',        600.00, 'INACTIVE', 0.00, 30.4052, -9.6052, TRUE);
-
+(11, 'P-Founty-01',        600.00, 'INACTIVE', 0.00, 30.4052, -9.6052, TRUE),
+(9,  'P-BensergaoSud-01',  800.00, 'INACTIVE', 0.00, 30.3802, -9.5702, TRUE),
+(12, 'P-QuartierSuisse-01', 500.00, 'INACTIVE', 0.00, 30.4182, -9.6022, TRUE),
+(13, 'P-Dakhla-01',        900.00, 'INACTIVE', 0.00, 30.4152, -9.5702, TRUE),
+(14, 'P-Amicales-01',      850.00, 'INACTIVE', 0.00, 30.4252, -9.5852, TRUE),
+(15, 'P-Charaf-01',       1100.00, 'INACTIVE', 0.00, 30.4352, -9.5752, TRUE),
+(16, 'P-RiadSalam-01',    1200.00, 'INACTIVE', 0.00, 30.4052, -9.5552, TRUE),
+(17, 'P-Illigh-01',        750.00, 'INACTIVE', 0.00, 30.4452, -9.5702, TRUE),
+(18, 'P-Taddart-01',      1600.00, 'INACTIVE', 0.00, 30.4402, -9.6102, TRUE),
+(19, 'P-Sonaba-01',        650.00, 'INACTIVE', 0.00, 30.3952, -9.5802, TRUE),
+(20, 'P-ElKhiam-01',      1350.00, 'INACTIVE', 0.00, 30.4182, -9.5822, TRUE),
+(21, 'P-QIndustriel-01',  2200.00, 'INACTIVE', 0.00, 30.4222, -9.5722, TRUE),
+(22, 'P-Najah-01',        1000.00, 'INACTIVE', 0.00, 30.4022, -9.5652, TRUE);
 -- ============================================================
 -- 3. BOUCHES D'ÉGOUT — 16 bouches, adresses réelles Agadir
 -- ============================================================
@@ -75,7 +86,18 @@ INSERT INTO BOUCHE_EGOUT (zone_id, pompe_id, adresse, coord_lat, coord_lng, capa
 (8,  11, 'Route de Tikiouine Km 14, Agadir',              30.3701, -9.5401, 5000.00,  6.00, 'NORMAL', '2026-02-05'),
 (10, 12, 'Quartier Al Houda, Rue Principale, Agadir',     30.4151, -9.5781, 3200.00, 20.00, 'NORMAL', '2026-01-25'),
 (11, 13, 'Boulevard du 20 Aout, Founty, Agadir',          30.4051, -9.6051, 3000.00,  9.00, 'NORMAL', '2026-02-15'),
-(12, NULL,'Avenue des FAR, Quartier Suisse, Agadir',      30.4181, -9.6021, 2500.00,  5.00, 'NORMAL', '2026-02-20');
+(12, 15, 'Avenue des FAR, Quartier Suisse, Agadir',       30.4181, -9.6021, 2500.00,  5.00, 'NORMAL', '2026-02-20'),
+(9,  14, 'Rue Bensergao Sud',                             30.3801, -9.5701, 3200.00, 10.00, 'NORMAL', '2026-01-10'),
+(13, 16, 'Boulevard Dakhla',                              30.4151, -9.5701, 3600.00, 15.00, 'NORMAL', '2026-01-10'),
+(14, 17, 'Rue Les Amicales',                              30.4251, -9.5851, 3400.00, 12.00, 'NORMAL', '2026-01-10'),
+(15, 18, 'Avenue Charaf',                                 30.4351, -9.5751, 4000.00, 18.00, 'NORMAL', '2026-01-10'),
+(16, 19, 'Boulevard Riad Salam',                          30.4051, -9.5551, 4500.00, 22.00, 'NORMAL', '2026-01-10'),
+(17, 20, 'Rue Illigh',                                    30.4451, -9.5701, 3000.00,  8.00, 'NORMAL', '2026-01-10'),
+(18, 21, 'Route Taddart',                                 30.4401, -9.6101, 5500.00, 28.00, 'NORMAL', '2026-01-10'),
+(19, 22, 'Secteur Sonaba',                                30.3951, -9.5801, 2800.00,  6.00, 'NORMAL', '2026-01-10'),
+(20, 23, 'Avenue El Khiam',                               30.4181, -9.5821, 4800.00, 25.00, 'NORMAL', '2026-01-10'),
+(21, 24, 'Zone Industrielle Principale',                  30.4221, -9.5721, 7500.00, 35.00, 'NORMAL', '2026-01-10'),
+(22, 25, 'Quartier Najah',                                30.4021, -9.5651, 4000.00, 20.00, 'NORMAL', '2026-01-10');
 
 -- ============================================================
 -- 4. CAPTEURS — 18 capteurs
@@ -98,7 +120,20 @@ INSERT INTO CAPTEUR (zone_id, bouche_id, type_capteur, modele, seuil_alerte, seu
 (6,  11, 'DEBIT',      'FlowMeter-F5',   750.00,1150.00, 'ACTIF', '2024-04-15'),
 (7,  12, 'NIVEAU_EAU', 'HySense-NW100',   60.00,  80.00, 'ACTIF', '2024-05-10'),
 (10, 14, 'NIVEAU_EAU', 'HySense-NW100',   62.00,  82.00, 'ACTIF', '2024-05-20'),
-(8,  13, 'NIVEAU_EAU', 'HySense-NW100',   55.00,  75.00, 'ACTIF', '2024-06-01');
+(8,  13, 'NIVEAU_EAU', 'HySense-NW100',   55.00,  75.00, 'ACTIF', '2024-06-01'),
+(11, 15, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(12, 16, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(9,  17, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(13, 18, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(14, 19, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(15, 20, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(16, 21, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(17, 22, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(18, 23, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(19, 24, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(20, 25, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(21, 26, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01'),
+(22, 27, 'NIVEAU_EAU', 'HySense-NW100',   50.00,  70.00, 'ACTIF', '2024-06-01');
 
 -- ============================================================
 -- 5. RÉSEAU DE DRAINAGE — 10 segments

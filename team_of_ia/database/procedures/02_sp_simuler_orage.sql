@@ -9,6 +9,8 @@ DELIMITER $$
 --        générer N mesures critiques simultanées
 --        pour tester la charge (scénario QA : 500 alertes)
 -- ============================================================
+DROP PROCEDURE IF EXISTS sp_simuler_orage$$
+
 CREATE PROCEDURE sp_simuler_orage(
     IN p_zone_id        INT,
     IN p_intensite_mm_h DECIMAL(6,2)
@@ -37,15 +39,6 @@ BEGIN
 
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_finished = TRUE;
 
-    -- Mettre à jour le niveau de risque de la zone
-    UPDATE ZONE
-    SET    niveau_risque = CASE
-               WHEN p_intensite_mm_h >= 50 THEN 'CRITIQUE'
-               WHEN p_intensite_mm_h >= 30 THEN 'ELEVE'
-               ELSE 'MOYEN'
-           END
-    WHERE  zone_id = p_zone_id;
-
     OPEN cur_capteurs;
 
     boucle_capteurs: LOOP
@@ -55,44 +48,58 @@ BEGIN
             LEAVE boucle_capteurs;
         END IF;
 
-        -- Calculer la valeur simulée
-        -- Formule : seuil_critique × (1 + intensité/100)
-        SET v_valeur_sim = v_seuil_critique * (1 + (p_intensite_mm_h / 100));
+        IF v_capteur_id IS NOT NULL THEN
+            -- Calculer la valeur simulée
+            -- Formule : seuil_critique × (1 + intensité/100)
+            SET v_valeur_sim = v_seuil_critique * (1 + (p_intensite_mm_h / 100));
 
-        -- Insérer la mesure simulée (déclenchera trg_creation_alerte)
-        INSERT INTO MESURE (
-            capteur_id, valeur, unite,
-            date_heure, qualite_signal, anomalie, note
-        ) VALUES (
-            v_capteur_id,
-            v_valeur_sim,
-            v_unite,
-            NOW(),
-            'BONNE',
-            FALSE,
-            CONCAT('SIMULATION ORAGE — intensite=', p_intensite_mm_h, 'mm/h')
-        );
+            -- Insérer la mesure simulée (déclenchera trg_creation_alerte)
+            INSERT INTO MESURE (
+                capteur_id, valeur, unite,
+                date_heure, qualite_signal, anomalie, note
+            ) VALUES (
+                v_capteur_id,
+                v_valeur_sim,
+                IFNULL(v_unite, 'mm/h'),
+                NOW(),
+                'BONNE',
+                FALSE,
+                CONCAT('SIMULATION ORAGE — intensite=', p_intensite_mm_h, 'mm/h')
+            );
 
-        SET v_nb_alertes = v_nb_alertes + 1;
+            SET v_nb_alertes = v_nb_alertes + 1;
 
-        -- Mettre à jour le taux de remplissage des bouches
-        UPDATE BOUCHE_EGOUT b
-        JOIN   CAPTEUR c ON c.bouche_id = b.bouche_id
-        SET    b.taux_remplissage = LEAST(
-                   b.taux_remplissage + (p_intensite_mm_h * 0.8),
-                   100.0
-               )
-        WHERE  c.capteur_id = v_capteur_id;
+            -- Mettre à jour le taux de remplissage des bouches
+            UPDATE BOUCHE_EGOUT b
+            JOIN   CAPTEUR c ON c.bouche_id = b.bouche_id
+            SET    b.taux_remplissage = LEAST(
+                       b.taux_remplissage + (p_intensite_mm_h * 0.8),
+                       100.0
+                   )
+            WHERE  c.capteur_id = v_capteur_id;
+        END IF;
 
     END LOOP boucle_capteurs;
 
     CLOSE cur_capteurs;
+    
+    -- Mettre à jour DYNAMIQUEMENT le niveau de risque de la zone
+    -- Remplacement de SELECT INTO par SET = (SELECT ...) par sécurité
+    SET v_valeur_sim = (SELECT MAX(taux_remplissage) FROM BOUCHE_EGOUT WHERE zone_id = p_zone_id);
+    SET v_valeur_sim = IFNULL(v_valeur_sim, 0);
+
+    UPDATE ZONE
+    SET niveau_risque = CASE
+        WHEN v_valeur_sim >= 85.0 THEN 'CRITIQUE'
+        WHEN v_valeur_sim >= 60.0 THEN 'ELEVE'
+        WHEN v_valeur_sim >= 30.0 THEN 'MOYEN'
+        ELSE 'FAIBLE'
+    END
+    WHERE zone_id = p_zone_id;
 
     -- Compter les pompes activées pendant la simulation
-    SELECT COUNT(*) INTO v_nb_pompes
-    FROM   POMPE
-    WHERE  zone_id = p_zone_id
-    AND    statut  = 'ACTIVE';
+    SET v_nb_pompes = (SELECT COUNT(*) FROM POMPE WHERE zone_id = p_zone_id AND statut = 'ACTIVE');
+    SET v_nb_pompes = IFNULL(v_nb_pompes, 0);
 
     -- Résultat de la simulation
     SELECT
@@ -114,8 +121,3 @@ BEGIN
 END$$
 
 DELIMITER ;
-
--- ============================================================
--- Vérification : afficher les procédures créées
--- ============================================================
-SHOW PROCEDURE STATUS WHERE Db = 'urba_drain_agadir';

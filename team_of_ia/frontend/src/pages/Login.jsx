@@ -1,181 +1,180 @@
-import { useState } from 'react'
+import { useState } from 'react';
+import { login } from '../api/client';
+import { Droplets, Lock, Mail, Loader2, ArrowRight } from 'lucide-react';
 
-export default function Login({ onLogin, dark }) {
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState('')
-
-    const T = {
-        bg: dark ? '#0f172a' : '#f1f5f9',
-        surface: dark ? '#1e293b' : '#ffffff',
-        border: dark ? '#334155' : '#e2e8f0',
-        text: dark ? '#f1f5f9' : '#0f172a',
-        textSub: dark ? '#94a3b8' : '#64748b',
-        shadow: dark ? '0 8px 32px rgba(0,0,0,.5)' : '0 8px 32px rgba(0,0,0,.1)',
-    }
+export default function Login({ onLogin }) {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
-        e.preventDefault()
-        setLoading(true)
-        setError('')
+        e.preventDefault();
+        setLoading(true);
+        setError('');
 
-        // Simulation login (remplacer par appel API Flask)
-        await new Promise(r => setTimeout(r, 1000))
-
-        const DEMO_USERS = [
-            { email: 'admin@urba-drain.ma', password: 'admin123', role: 'ADMIN' },
-            { email: 'operateur@urba-drain.ma', password: 'oper123', role: 'OPERATEUR' },
-            { email: 'lecteur@urba-drain.ma', password: 'lecteur123', role: 'LECTEUR' },
-        ]
-
-        const user = DEMO_USERS.find(u => u.email === email && u.password === password)
-        if (user) {
-            localStorage.setItem('token', 'demo-jwt-token')
-            localStorage.setItem('role', user.role)
-            onLogin(user)
-        } else {
-            setError('Email ou mot de passe incorrect')
+        try {
+            const data = await login(email, password);
+            localStorage.setItem('token', data.access_token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('role', data.user.role);
+            onLogin(data.user);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Erreur de connexion. Veuillez vérifier vos identifiants.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false)
     }
 
     return (
         <div style={{
-            minHeight: '100vh', background: T.bg,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'Inter', system-ui, sans-serif",
-            padding: '24px',
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            position: 'relative',
+            background: '#060d1a',
+            overflow: 'hidden',
+            fontFamily: "'Inter', sans-serif"
         }}>
-            <div style={{ width: '100%', maxWidth: '400px' }}>
+            {/* Ambient Animated Gradients */}
+            <div style={{
+                position: 'fixed', top: '-20%', left: '-10%', width: '60vw', height: '60vw',
+                background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(6,13,26,0) 70%)',
+                filter: 'blur(80px)', zIndex: 0, borderRadius: '50%',
+                animation: 'pulse 8s infinite alternate'
+            }} />
+            <div style={{
+                position: 'fixed', bottom: '-20%', right: '-10%', width: '50vw', height: '50vw',
+                background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, rgba(6,13,26,0) 70%)',
+                filter: 'blur(80px)', zIndex: 0, borderRadius: '50%',
+                animation: 'pulse 6s infinite alternate-reverse'
+            }} />
 
-                {/* Logo */}
-                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <style>
+                {`
+                @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.1); opacity: 1; } }
+                @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes spin { 100% { transform: rotate(360deg); } }
+                .input-field:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1) !important; }
+                `}
+            </style>
+
+            <div style={{
+                width: '100%',
+                maxWidth: '440px',
+                padding: '48px 40px',
+                position: 'relative',
+                zIndex: 10,
+                background: 'rgba(12, 20, 38, 0.7)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.07)',
+                borderRadius: '24px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(59,130,246,0.1)',
+                animation: 'slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                textAlign: 'center'
+            }}>
+                <div style={{ marginBottom: '40px' }}>
                     <div style={{
-                        width: '56px', height: '56px',
-                        background: 'linear-gradient(135deg,#1d4ed8,#1e40af)',
-                        borderRadius: '14px', margin: '0 auto 14px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '28px', boxShadow: '0 4px 16px rgba(29,78,216,.4)',
-                    }}>🌊</div>
-                    <h1 style={{ fontSize: '22px', fontWeight: '700', color: T.text, marginBottom: '4px' }}>
-                        Urba-Drain Agadir
+                        width: '72px', height: '72px', margin: '0 auto 24px',
+                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                        borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 10px 25px rgba(59,130,246,0.4)', transform: 'rotate(-4deg)'
+                    }}>
+                        <Droplets size={36} color="white" />
+                    </div>
+                    <h1 style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-0.03em', marginBottom: '8px', color: '#f1f5f9' }}>
+                        Urba-Drain <span style={{ color: '#3b82f6' }}>Agadir</span>
                     </h1>
-                    <p style={{ fontSize: '13px', color: T.textSub }}>
-                        Système de gestion réseau pluvial
+                    <p style={{ color: '#94a3b8', fontSize: '15px', fontWeight: '500' }}>
+                        Plateforme de gestion résiliente
                     </p>
                 </div>
 
-                {/* Carte */}
-                <div style={{
-                    background: T.surface, border: `1px solid ${T.border}`,
-                    borderRadius: '14px', padding: '32px', boxShadow: T.shadow,
-                }}>
-                    <h2 style={{ fontSize: '16px', fontWeight: '600', color: T.text, marginBottom: '22px' }}>
-                        Connexion
-                    </h2>
-
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-                        {/* Email */}
-                        <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: T.textSub, marginBottom: '6px' }}>
-                                Email
-                            </label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder="admin@urba-drain.ma"
-                                required
-                                style={{
-                                    width: '100%', padding: '9px 12px',
-                                    borderRadius: '7px', border: `1px solid ${T.border}`,
-                                    background: T.surface, color: T.text,
-                                    fontSize: '13px', fontFamily: 'inherit', outline: 'none',
-                                    transition: 'border-color .15s ease',
-                                }}
-                                onFocus={e => e.target.style.borderColor = '#1d4ed8'}
-                                onBlur={e => e.target.style.borderColor = T.border}
-                            />
-                        </div>
-
-                        {/* Mot de passe */}
-                        <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: T.textSub, marginBottom: '6px' }}>
-                                Mot de passe
-                            </label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                required
-                                style={{
-                                    width: '100%', padding: '9px 12px',
-                                    borderRadius: '7px', border: `1px solid ${T.border}`,
-                                    background: T.surface, color: T.text,
-                                    fontSize: '13px', fontFamily: 'inherit', outline: 'none',
-                                    transition: 'border-color .15s ease',
-                                }}
-                                onFocus={e => e.target.style.borderColor = '#1d4ed8'}
-                                onBlur={e => e.target.style.borderColor = T.border}
-                            />
-                        </div>
-
-                        {/* Erreur */}
-                        {error && (
-                            <div style={{
-                                padding: '10px 12px', borderRadius: '7px',
-                                background: dark ? 'rgba(220,38,38,.1)' : '#fef2f2',
-                                border: '1px solid #fca5a5',
-                                fontSize: '13px', color: '#dc2626',
-                            }}>
-                                ⚠ {error}
-                            </div>
-                        )}
-
-                        {/* Submit */}
-                        <button type="submit" disabled={loading} style={{
-                            padding: '10px', borderRadius: '8px', border: 'none',
-                            background: loading ? '#94a3b8' : 'linear-gradient(135deg,#1d4ed8,#1e40af)',
-                            color: 'white', fontSize: '13px', fontWeight: '600',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            fontFamily: 'inherit', transition: 'all .2s ease',
-                            marginTop: '4px',
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {error && (
+                        <div style={{
+                            padding: '14px 16px', borderRadius: '12px',
+                            background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)',
+                            color: '#ef4444', fontSize: '14px', fontWeight: '500', 
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            animation: 'slide-up 0.3s ease', textAlign: 'left'
                         }}>
-                            {loading ? '⚙ Connexion en cours…' : 'Se connecter'}
-                        </button>
-                    </form>
+                            <div style={{width:'4px', height:'20px', background:'#ef4444', borderRadius:'2px', flexShrink: 0}} />
+                            {error}
+                        </div>
+                    )}
 
-                    {/* Comptes démo */}
-                    <div style={{
-                        marginTop: '22px', padding: '12px',
-                        background: dark ? 'rgba(29,78,216,.08)' : '#eff6ff',
-                        border: `1px solid ${dark ? 'rgba(29,78,216,.2)' : '#bfdbfe'}`,
-                        borderRadius: '8px',
-                    }}>
-                        <p style={{ fontSize: '11px', fontWeight: '600', color: '#1d4ed8', marginBottom: '7px' }}>
-                            Comptes de démonstration
-                        </p>
-                        {[
-                            ['admin@urba-drain.ma', 'admin123', 'ADMIN'],
-                            ['operateur@urba-drain.ma', 'oper123', 'OPERATEUR'],
-                            ['lecteur@urba-drain.ma', 'lecteur123', 'LECTEUR'],
-                        ].map(([e, p, r]) => (
-                            <div key={r} style={{ fontSize: '11px', color: T.textSub, marginBottom: '3px', display: 'flex', gap: '8px' }}>
-                                <span style={{ color: '#1d4ed8', fontWeight: '500', minWidth: '76px' }}>{r}</span>
-                                <span style={{ fontFamily: 'monospace' }}>{e}</span>
-                                <span style={{ color: T.textSub }}>/ {p}</span>
-                            </div>
-                        ))}
+                    <div style={{ position: 'relative' }}>
+                        <Mail size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            placeholder="Email institutionnel"
+                            className="input-field"
+                            required
+                            style={{
+                                width: '100%', padding: '16px 16px 16px 48px',
+                                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '14px', color: '#f1f5f9', fontSize: '15px',
+                                outline: 'none', transition: 'all 0.2s ease',
+                                boxSizing: 'border-box'
+                            }}
+                        />
                     </div>
-                </div>
 
-                <p style={{ textAlign: 'center', fontSize: '11px', color: T.textSub, marginTop: '20px' }}>
-                    ENSIASD Taroudant · Équipe Augmenteds · SIBD 2025-2026
-                </p>
+                    <div style={{ position: 'relative' }}>
+                        <Lock size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            placeholder="Mot de passe"
+                            className="input-field"
+                            required
+                            style={{
+                                width: '100%', padding: '16px 16px 16px 48px',
+                                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '14px', color: '#f1f5f9', fontSize: '15px',
+                                outline: 'none', transition: 'all 0.2s ease',
+                                boxSizing: 'border-box'
+                            }}
+                        />
+                    </div>
+
+                    <button type="submit" disabled={loading} style={{
+                        marginTop: '12px', padding: '16px', fontSize: '16px', fontWeight: '600',
+                        background: loading ? '#475569' : 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                        color: 'white', border: 'none', borderRadius: '14px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        boxShadow: loading ? 'none' : '0 8px 16px rgba(59,130,246,0.3)',
+                        transition: 'all 0.2s ease',
+                        fontFamily: 'inherit'
+                    }}>
+                        {loading ? <Loader2 size={22} style={{ animation: 'spin 1.5s linear infinite' }} /> : (
+                            <>Connexion <ArrowRight size={20} /></>
+                        )}
+                    </button>
+                </form>
+
+                <div style={{ marginTop: '32px', fontSize: '13px', color: '#475569', display: 'flex', justifyContent: 'center' }}>
+                    admin@urba-drain-agadir.ma / admin123
+                </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+                position: 'fixed', bottom: '24px', left: 0, right: 0,
+                textAlign: 'center', color: '#475569', fontSize: '13px',
+                fontWeight: '500', zIndex: 10
+            }}>
+                ENSIASD Taroudant · SIBD 2025-2026
             </div>
         </div>
-    )
+    );
 }
