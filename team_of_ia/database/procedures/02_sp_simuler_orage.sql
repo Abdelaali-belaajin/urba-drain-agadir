@@ -60,8 +60,18 @@ BEGIN
                 
                 SET v_current_taux = IFNULL(v_current_taux, 0);
                 
-                -- 2. Ajouter l'impact de la pluie (approx. 0.8% par mm/h)
-                SET v_current_taux = LEAST(v_current_taux + (p_intensite_mm_h * 0.8), 100.0);
+                -- 2. Ajouter l'impact agressif de la pluie selon le scénario
+                IF p_intensite_mm_h >= 100 THEN
+                    SET v_current_taux = GREATEST(v_current_taux + 50.0, 95.0);
+                ELSEIF p_intensite_mm_h >= 70 THEN
+                    SET v_current_taux = GREATEST(v_current_taux + 40.0, 86.0);
+                ELSEIF p_intensite_mm_h >= 40 THEN
+                    SET v_current_taux = GREATEST(v_current_taux + 25.0, 76.0);
+                ELSE
+                    SET v_current_taux = v_current_taux + 15.0;
+                END IF;
+                
+                SET v_current_taux = LEAST(v_current_taux, 100.0);
                 
                 -- 3. Mettre à jour la bouche D'ABORD
                 UPDATE BOUCHE_EGOUT b

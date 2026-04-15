@@ -1,7 +1,7 @@
 # MLD — Modèle Logique de Données
 ## Urba-Drain Agadir · ENSIASD Taroudant · SIBD 2025-2026
 
-> **Base** : `01_create_tables.sql` (schéma exact)
+> **Base** : `01_create_tables.sql` + `02_create_citoyens.sql` (schéma exact)
 > **Notation** : **PK** clé primaire · *FK* clé étrangère · `UK` unicité · `NN` NOT NULL
 
 ---
@@ -119,7 +119,7 @@ ALERTE (
     capteur_id          INT             NN  FK → CAPTEUR(capteur_id)      ON DELETE RESTRICT  ON UPDATE CASCADE,
     bouche_id           INT             NN  FK → BOUCHE_EGOUT(bouche_id)   ON DELETE RESTRICT  ON UPDATE CASCADE,
     zone_id             INT             NN  FK → ZONE(zone_id)             ON DELETE RESTRICT  ON UPDATE CASCADE,
-    niveau_alerte       ENUM('INFO','WARNING','CRITICAL','EMERGENCY')  NN,
+    niveau_alerte       ENUM('INFO','ELEVE','CRITIQUE','MOYEN','FAIBLE')  NN,
     message             TEXT            NN,
     valeur_declenchante DECIMAL(10,2)   NN,
     date_heure          DATETIME        DEFAULT CURRENT_TIMESTAMP,
@@ -133,6 +133,7 @@ ALERTE (
 ENGINE = InnoDB
 ```
 *Créée exclusivement par `trg_creation_alerte` (AFTER INSERT MESURE)*
+*Niveaux effectifs utilisés par le trigger : **ELEVE** (seuil alerte) et **CRITIQUE** (seuil critique)*
 
 ---
 
@@ -201,6 +202,39 @@ ENGINE = InnoDB
 
 ---
 
+### CITOYEN
+```
+CITOYEN (
+    citoyen_id      INT             PK  AUTO_INCREMENT,
+    nom             VARCHAR(100)    NN,
+    email           VARCHAR(150)    NN  UK,
+    zone_id         INT             NN  FK → ZONE(zone_id)  ON DELETE CASCADE  ON UPDATE CASCADE,
+    date_inscription DATETIME       DEFAULT CURRENT_TIMESTAMP
+)
+ENGINE = InnoDB
+```
+*Seed : 4 citoyens de test — Youssef Amrani (zone 1), Siham Bennis (zone 1), Karim Mansouri (zone 2), Fatima Zahra (zone 3)*
+*Remarque : ON DELETE **CASCADE** — suppression d'une zone entraîne la suppression des citoyens abonnés*
+
+---
+
+### CITOYEN_ALERT_LOG *(Anti-spam)*
+```
+CITOYEN_ALERT_LOG (
+    log_id          INT             PK  AUTO_INCREMENT,
+    zone_id         INT             NN  FK → ZONE(zone_id)  ON DELETE CASCADE  ON UPDATE CASCADE,
+    date_envoi      DATETIME        DEFAULT CURRENT_TIMESTAMP,
+    incident_token  VARCHAR(100)    NN,
+    nombre_envoyes  INT             DEFAULT 0,
+
+    INDEX idx_alert_token (incident_token)
+)
+ENGINE = InnoDB
+```
+*Journal anti-répétition : chaque `incident_token` identifie un incident unique (ex: zone_id + date + risque)*
+
+---
+
 ## Matrice des clés étrangères
 
 | Contrainte | Table | Colonne | Réf. Table | Réf. Colonne | ON DELETE | ON UPDATE |
@@ -218,21 +252,25 @@ ENGINE = InnoDB
 | fk_segment_aval | RESEAU_DRAINAGE | bouche_aval_id | BOUCHE_EGOUT | bouche_id | RESTRICT | CASCADE |
 | fk_log_user | LOG_ACTIVITE | user_id | UTILISATEUR | user_id | **SET NULL** | CASCADE |
 | fk_log_alerte | LOG_ACTIVITE | alerte_id | ALERTE | alerte_id | **SET NULL** | CASCADE |
+| fk_citoyen_zone | CITOYEN | zone_id | ZONE | zone_id | **CASCADE** | CASCADE |
+| fk_alert_log_zone | CITOYEN_ALERT_LOG | zone_id | ZONE | zone_id | **CASCADE** | CASCADE |
 
 ---
 
 ## Ordre de création (respectant les dépendances FK)
 
 ```
-1. ZONE              ← aucune dépendance
-2. POMPE             ← ZONE
-3. BOUCHE_EGOUT      ← ZONE, POMPE
-4. CAPTEUR           ← ZONE, BOUCHE_EGOUT
-5. MESURE            ← CAPTEUR
-6. ALERTE            ← CAPTEUR, BOUCHE_EGOUT, ZONE
-7. RESEAU_DRAINAGE   ← BOUCHE_EGOUT (×2 — amont & aval)
-8. UTILISATEUR       ← aucune dépendance
-9. LOG_ACTIVITE      ← UTILISATEUR, ALERTE
+ 1. ZONE               ← aucune dépendance
+ 2. POMPE              ← ZONE
+ 3. BOUCHE_EGOUT       ← ZONE, POMPE
+ 4. CAPTEUR            ← ZONE, BOUCHE_EGOUT
+ 5. MESURE             ← CAPTEUR
+ 6. ALERTE             ← CAPTEUR, BOUCHE_EGOUT, ZONE
+ 7. RESEAU_DRAINAGE    ← BOUCHE_EGOUT (×2 — amont & aval)
+ 8. UTILISATEUR        ← aucune dépendance
+ 9. LOG_ACTIVITE       ← UTILISATEUR, ALERTE
+10. CITOYEN            ← ZONE
+11. CITOYEN_ALERT_LOG  ← ZONE
 ```
 
 ---
@@ -259,9 +297,11 @@ ENGINE = InnoDB
 ### `trg_creation_alerte` — AFTER INSERT ON MESURE
 ```sql
 -- 02_trg_creation_alerte.sql
--- Si valeur >= seuil_critique → ALERTE 'CRITICAL' + bouche SATURE
--- Si valeur >= seuil_alerte  → ALERTE 'WARNING'  + bouche ALERTE (si NORMAL)
--- Dans les deux cas : UPDATE CAPTEUR SET derniere_mesure = NEW.date_heure
+-- Anti-spam : vérifie s'il existe déjà une alerte NON résolue pour ce capteur
+-- Si valeur >= seuil_critique → ALERTE 'CRITIQUE' + bouche SATURE (ou escalade ELEVE→CRITIQUE)
+-- Si valeur >= seuil_alerte  → ALERTE 'ELEVE'    + bouche ALERTE (si NORMAL)
+-- Si valeur <  seuil_alerte  → auto-résolution de l'alerte active + bouche NORMAL
+-- Dans tous les cas : UPDATE CAPTEUR SET derniere_mesure = NEW.date_heure
 ```
 
 ### `trg_activation_pompe` — AFTER UPDATE ON BOUCHE_EGOUT
@@ -283,7 +323,7 @@ ENGINE = InnoDB
 
 ---
 
-## Procédure stockée
+## Procédures stockées
 
 ### `sp_simuler_cheminement_eau(IN p_zone_id INT)`
 ```sql
@@ -294,6 +334,28 @@ ENGINE = InnoDB
 --   UPDATE RESEAU_DRAINAGE SET debit_actuel_Lmin = debit_calcule
 --   Si debit_calcule > 85% * debit_max → goulot = TRUE
 -- Résultat : segments_analyses, goulots_detectes, etat_reseau (RESEAU_OK|ATTENTION|CRITIQUE)
+```
+
+### `sp_simuler_orage(IN p_zone_id INT, IN p_intensite_mm_h DECIMAL)`
+```sql
+-- 02_sp_simuler_orage.sql
+-- Curseur sur CAPTEUR actifs de la zone
+-- Pour chaque capteur :
+--   Calcul du nouveau taux selon l'intensité :
+--     ≥ 100 mm/h → taux ≥ 95% | ≥ 70 → ≥ 86% | ≥ 40 → ≥ 76% | < 40 → +15%
+--   UPDATE BOUCHE_EGOUT SET taux_remplissage (plafonné à 100%)
+--   INSERT MESURE avec valeur proportionnelle (déclenche trg_creation_alerte)
+-- Mise à jour dynamique du niveau_risque de la ZONE
+-- Résultat : zone, intensité, nb_mesures, nb_pompes_activees, alertes_actives, goulots
+```
+
+### `sp_simuler_decrue(IN p_zone_id INT)`
+```sql
+-- 03_sp_simuler_decrue.sql
+-- Baisse progressive du taux de remplissage (−30%, plancher à 0 via GREATEST)
+-- Curseur : INSERT MESURE valeur=0 pour chaque capteur actif (force la clôture des alertes)
+-- Double sécurité : désactivation des pompes si taux < 30%
+-- Mise à jour dynamique du niveau_risque de la ZONE
 ```
 
 ---
@@ -309,6 +371,8 @@ ENGINE = InnoDB
 | MESURE | 18 | 1 mesure initiale par capteur |
 | RESEAU_DRAINAGE | 10 | Segments 45–420 m, ∅ 35–60 cm |
 | UTILISATEUR | 4 | ADMIN, OPERATEUR, TECHNICIEN, LECTEUR |
+| CITOYEN | 4 | Citoyens de test (zones 1, 1, 2, 3) |
+| CITOYEN_ALERT_LOG | 0 | Généré à la demande par le backend |
 | ALERTE | 0 | Générées à la demande par triggers |
 | LOG_ACTIVITE | 0 | Générée à la demande par triggers |
 

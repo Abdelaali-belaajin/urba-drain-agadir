@@ -60,7 +60,17 @@ try:
                     
                     SET v_current_taux = IFNULL(v_current_taux, 0);
                     
-                    SET v_current_taux = LEAST(v_current_taux + (p_intensite_mm_h * 0.8), 100.0);
+                    IF p_intensite_mm_h >= 100 THEN
+                        SET v_current_taux = GREATEST(v_current_taux + 50.0, 95.0);
+                    ELSEIF p_intensite_mm_h >= 70 THEN
+                        SET v_current_taux = GREATEST(v_current_taux + 40.0, 86.0);
+                    ELSEIF p_intensite_mm_h >= 40 THEN
+                        SET v_current_taux = GREATEST(v_current_taux + 25.0, 76.0);
+                    ELSE
+                        SET v_current_taux = v_current_taux + 15.0;
+                    END IF;
+                    
+                    SET v_current_taux = LEAST(v_current_taux, 100.0);
                     
                     UPDATE BOUCHE_EGOUT b
                     JOIN CAPTEUR c ON c.bouche_id = b.bouche_id

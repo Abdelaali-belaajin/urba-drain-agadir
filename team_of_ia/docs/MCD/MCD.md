@@ -1,7 +1,7 @@
 # MCD — Modèle Conceptuel de Données
 ## Urba-Drain Agadir · ENSIASD Taroudant · SIBD 2025-2026
 
-> **Base** : `01_create_tables.sql` + `01_seed_data.sql`
+> **Base** : `01_create_tables.sql` + `02_create_citoyens.sql` + `01_seed_data.sql`
 > **Cardinalité** : `(min,max)` — côté source → côté cible
 
 ---
@@ -94,7 +94,7 @@
 | Attribut | Type | Contrainte |
 |----------|------|-----------|
 | **alerte_id** | Entier | Identifiant |
-| niveau_alerte | INFO / WARNING / CRITICAL / EMERGENCY | |
+| niveau_alerte | INFO / ELEVE / CRITIQUE / MOYEN / FAIBLE | |
 | message | Texte | Généré par trigger |
 | valeur_declenchante | Décimal | |
 | date_heure | DateHeure | |
@@ -150,13 +150,39 @@
 
 ---
 
+### CITOYEN
+| Attribut | Type | Contrainte |
+|----------|------|-----------|
+| **citoyen_id** | Entier | Identifiant |
+| nom | Chaîne(100) | |
+| email | Chaîne(150) | Unique |
+| date_inscription | DateHeure | |
+
+*Seed : 4 citoyens de test (Youssef Amrani, Siham Bennis, Karim Mansouri, Fatima Zahra)*
+
+---
+
+### CITOYEN_ALERT_LOG *(Anti-spam)*
+| Attribut | Type | Contrainte |
+|----------|------|-----------|
+| **log_id** | Entier | Identifiant |
+| date_envoi | DateHeure | |
+| incident_token | Chaîne(100) | Identifie un incident unique |
+| nombre_envoyes | Entier | Nombre de notifications envoyées |
+
+*Journal d'envoi de notifications pour éviter le spam — 1 entrée par incident*
+
+---
+
 ## Associations et cardinalités
 
 ```
-ZONE ──────────(1,1)────── hébergée dans ──────(0,N)── POMPE
+ZONE ──────────(1,1)────── héberge        ──────(0,N)── POMPE
 ZONE ──────────(1,1)────── contient       ──────(0,N)── BOUCHE_EGOUT
 ZONE ──────────(1,1)────── possède        ──────(0,N)── CAPTEUR
 ZONE ──────────(1,1)────── génère         ──────(0,N)── ALERTE
+ZONE ──────────(1,1)────── abrite         ──────(0,N)── CITOYEN
+ZONE ──────────(1,1)────── notifie via    ──────(0,N)── CITOYEN_ALERT_LOG
 
 BOUCHE_EGOUT ──(1,1)────── équipée de     ──────(0,N)── CAPTEUR
 BOUCHE_EGOUT ──(0,1)────── reliée à       ──────(0,1)── POMPE
@@ -198,6 +224,8 @@ erDiagram
         enum statut
         datetime date_activation
         decimal consommation_kw
+        decimal coord_lat
+        decimal coord_lng
         boolean automatique
     }
     BOUCHE_EGOUT {
@@ -277,11 +305,27 @@ erDiagram
         datetime date_heure
         varchar ip_adresse
     }
+    CITOYEN {
+        int citoyen_id PK
+        varchar nom
+        varchar email
+        int zone_id FK
+        datetime date_inscription
+    }
+    CITOYEN_ALERT_LOG {
+        int log_id PK
+        int zone_id FK
+        datetime date_envoi
+        varchar incident_token
+        int nombre_envoyes
+    }
 
     ZONE          ||--o{ POMPE            : "héberge (1,N)"
     ZONE          ||--o{ BOUCHE_EGOUT     : "contient (1,N)"
     ZONE          ||--o{ CAPTEUR          : "possède (1,N)"
     ZONE          ||--o{ ALERTE           : "génère (0,N)"
+    ZONE          ||--o{ CITOYEN          : "abrite (0,N)"
+    ZONE          ||--o{ CITOYEN_ALERT_LOG : "notifie (0,N)"
     BOUCHE_EGOUT  ||--o{ CAPTEUR          : "équipée de (1,N)"
     BOUCHE_EGOUT  |o--o| POMPE            : "reliée à (0,1)"
     BOUCHE_EGOUT  ||--o{ RESEAU_DRAINAGE  : "amont (0,N)"
@@ -303,14 +347,21 @@ erDiagram
 | RG02 | Schema FK | Une BOUCHE_EGOUT peut être reliée à 0 ou 1 POMPE (`SET NULL` si pompe supprimée) |
 | RG03 | Schema FK | Un CAPTEUR est obligatoirement associé à une BOUCHE_EGOUT de la même ZONE |
 | RG04 | Schema CHECK | Un segment RESEAU_DRAINAGE relie deux bouches **différentes** (`bouche_amont_id <> bouche_aval_id`) |
-| RG05 | `trg_creation_alerte` | INSERT MESURE → si `valeur >= seuil_critique` : ALERTE CRITICAL + bouche SATURE |
-| RG06 | `trg_creation_alerte` | INSERT MESURE → si `valeur >= seuil_alerte` : ALERTE WARNING + bouche ALERTE (si NORMAL) |
-| RG07 | `trg_activation_pompe` | UPDATE BOUCHE_EGOUT → si `taux_remplissage > 85%` : pompe associée ACTIVE (si INACTIVE & automatique) |
-| RG08 | `trg_activation_pompe` | UPDATE BOUCHE_EGOUT → si `taux_remplissage < 30%` : pompe INACTIVE (si ACTIVE & automatique) |
-| RG09 | `trg_log_pompe` | Tout changement de `statut` dans POMPE est tracé dans LOG_ACTIVITE |
-| RG10 | `sp_simuler_cheminement_eau` | Goulot = segment où `debit_actuel > 85% * debit_max` |
-| RG11 | LOG_ACTIVITE design | Table INSERT ONLY — aucun UPDATE ni DELETE jamais autorisé |
-| RG12 | RBAC seed | 4 rôles : ADMIN, OPERATEUR, TECHNICIEN, LECTEUR |
+| RG05 | `trg_creation_alerte` | INSERT MESURE → si `valeur >= seuil_critique` : ALERTE **CRITIQUE** + bouche SATURE (escalade si ELEVE existant) |
+| RG06 | `trg_creation_alerte` | INSERT MESURE → si `valeur >= seuil_alerte` : ALERTE **ELEVE** + bouche ALERTE (si NORMAL) |
+| RG07 | `trg_creation_alerte` | INSERT MESURE → si `valeur < seuil_alerte` ET alerte active : **auto-résolution** + bouche NORMAL |
+| RG08 | `trg_creation_alerte` | Anti-spam : une seule alerte active par capteur à la fois (pas de doublons) |
+| RG09 | `trg_activation_pompe` | UPDATE BOUCHE_EGOUT → si `taux_remplissage > 85%` : pompe associée ACTIVE (si INACTIVE & automatique) |
+| RG10 | `trg_activation_pompe` | UPDATE BOUCHE_EGOUT → si `taux_remplissage < 30%` : pompe INACTIVE (si ACTIVE & automatique) |
+| RG11 | `trg_log_pompe` | Tout changement de `statut` dans POMPE est tracé dans LOG_ACTIVITE |
+| RG12 | `sp_simuler_cheminement_eau` | Goulot = segment où `debit_actuel > 85% * debit_max` |
+| RG13 | `sp_simuler_orage` | Simulation d'orage : intensité ≥ 100 mm/h → taux ≥ 95 %, ≥ 70 → ≥ 86 %, ≥ 40 → ≥ 76 % |
+| RG14 | `sp_simuler_decrue` | Simulation de décrue : baisse du taux de −30 %, plancher à 0 % (GREATEST) |
+| RG15 | `sp_simuler_orage` / `sp_simuler_decrue` | Mise à jour dynamique du `niveau_risque` de la ZONE (FAIBLE/MOYEN/ELEVE/CRITIQUE) |
+| RG16 | Schema FK | Chaque CITOYEN est abonné à exactement une ZONE (`ON DELETE CASCADE`) |
+| RG17 | CITOYEN_ALERT_LOG | Un `incident_token` unique évite d'envoyer des doublons de notification |
+| RG18 | LOG_ACTIVITE design | Table INSERT ONLY — aucun UPDATE ni DELETE jamais autorisé |
+| RG19 | RBAC seed | 4 rôles : ADMIN, OPERATEUR, TECHNICIEN, LECTEUR |
 
 ---
 
