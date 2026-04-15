@@ -125,9 +125,10 @@ npm run dev
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| **Administrator** | `admin@urba-drain-agadir.ma` | `password123` |
-| **Technician** | `technicien@urba-drain-agadir.ma` | `password123` |
-| **Lecturer** | `lecteur@urba-drain-agadir.ma` | `password123` |
+| **Administrator** | `admin@urba-drain-agadir.ma` | `admin123` |
+| **Operator** | `operateur@urba-drain-agadir.ma` | `operateur123` |
+| **Technician** | `technicien@urba-drain-agadir.ma` | `technicien123` |
+| **Lecturer** | `lecteur@urba-drain-agadir.ma` | `lecteur123` |
 
 ---
 

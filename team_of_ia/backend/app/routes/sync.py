@@ -27,15 +27,44 @@ def synchronize_state():
         if z.bouches:
             max_taux = float(max((b.taux_remplissage or 0 for b in z.bouches), default=0))
             
-        # 2. Strict Rule: Water level > 90% -> zone must be CRITICAL
+        # 2. Strict Rule: Water level thresholds
         # Downgrade logic if the level decreases
         v_risque_calc = "FAIBLE"
-        if max_taux > 90:
+        if max_taux >= 85:
             v_risque_calc = "CRITIQUE"
-        elif max_taux > 75:
+        elif max_taux >= 60:
             v_risque_calc = "ELEVE"
-        elif max_taux > 40:
+        elif max_taux >= 30:
             v_risque_calc = "MOYEN"
+            
+        z_alertes = [a for a in alertes if a.zone_id == z.zone_id and not a.resolue]
+        z_pompes = [p for p in pompes if p.zone_id == z.zone_id]
+
+        # 3. Reduce water level resolves alerts (assuming < 85 is safe threshold for CRITICAL)
+        # We use < 85 here to be consistent with the CRITIQUE threshold being >= 85. 
+        # But wait, original was resolving all alerts if < 80. Let's use < 85.
+        if max_taux < 85:
+            for a in z_alertes:
+                # Resolve CRITIQUE alerts if water level drops
+                if a.niveau_alerte == "CRITIQUE":
+                    a.resolue = True
+                    a.date_resolution = datetime.utcnow()
+                    changed = True
+        
+        # Re-fetch active alerts in case we just resolved some
+        z_alertes = [a for a in z_alertes if not a.resolue]
+
+        # Determine maximum risk from alerts
+        alerte_levels = {"FAIBLE": 1, "MOYEN": 2, "ELEVE": 3, "CRITIQUE": 4, "CRITICAL": 4}
+        max_alerte_level = alerte_levels.get(v_risque_calc, 1)
+        
+        for a in z_alertes:
+            level_val = alerte_levels.get(a.niveau_alerte, 1)
+            if level_val > max_alerte_level:
+                max_alerte_level = level_val
+                v_risque_calc = a.niveau_alerte
+                if v_risque_calc == "CRITICAL":
+                    v_risque_calc = "CRITIQUE"
             
         if z.niveau_risque != v_risque_calc:
             z.niveau_risque = v_risque_calc
@@ -46,16 +75,6 @@ def synchronize_state():
                 from app.services.email_service import check_and_notify_citizens
                 check_and_notify_citizens(z.zone_id)
 
-        z_alertes = [a for a in alertes if a.zone_id == z.zone_id and not a.resolue]
-        z_pompes = [p for p in pompes if p.zone_id == z.zone_id]
-
-        # 3. Reduce water level resolves alerts (assuming < 80 is safe threshold)
-        if max_taux < 80:
-            for a in z_alertes:
-                a.resolue = True
-                a.date_resolution = datetime.utcnow()
-                changed = True
-                
         # 3b. Strict Rule: If zone is CRITIQUE -> MUST have at least 1 unresolved alert!
         if z.niveau_risque == "CRITIQUE" and not z_alertes:
             b_crit = max(z.bouches, key=lambda b: float(b.taux_remplissage or 0), default=None) if z.bouches else None

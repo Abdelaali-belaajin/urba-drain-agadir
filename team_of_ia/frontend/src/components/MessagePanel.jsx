@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Send, CheckCircle, User, X, MessageSquare } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { 
+  getMessages, getMessageUsers, markMessageAsRead, sendMessage 
+} from '../api/client';
 
 export default function MessagePanel({ onClose }) {
   const [messages, setMessages] = useState([]);
@@ -18,15 +19,8 @@ export default function MessagePanel({ onClose }) {
 
   const fetchMessages = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      const res = await fetch(`${API_URL}/messages`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(data);
-      }
+      const data = await getMessages();
+      setMessages(data);
     } catch (err) {
       console.error("Erreur lecture messages:", err);
     }
@@ -34,15 +28,8 @@ export default function MessagePanel({ onClose }) {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      const res = await fetch(`${API_URL}/messages/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data);
-      }
+      const data = await getMessageUsers();
+      setUsers(data);
     } catch (err) {
       console.error("Erreur lecture utilisateurs:", err);
     }
@@ -55,12 +42,8 @@ export default function MessagePanel({ onClose }) {
 
   const handleMarkAsRead = async (id) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/messages/${id}/lire`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) fetchMessages();
+      await markMessageAsRead(id);
+      fetchMessages();
     } catch (err) {
       console.error("Erreur:", err);
     }
@@ -71,26 +54,16 @@ export default function MessagePanel({ onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          destinataire_id: parseInt(formData.destinataire_id),
-          sujet: formData.sujet,
-          contenu: formData.contenu
-        })
+      await sendMessage({
+        destinataire_id: parseInt(formData.destinataire_id),
+        sujet: formData.sujet,
+        contenu: formData.contenu
       });
-      if (res.ok) {
-        setFormData({ destinataire_id: '', sujet: '', contenu: '' });
-        setActiveTab('inbox');
-        fetchMessages();
-      } else {
-        const data = await res.json();
-        setError(data.error || "Erreur lors de l'envoi");
-      }
+      setFormData({ destinataire_id: '', sujet: '', contenu: '' });
+      setActiveTab('inbox');
+      fetchMessages();
     } catch (err) {
-      setError("Erreur de connexion");
+      setError(err.response?.data?.error || "Erreur lors de l'envoi");
     } finally {
       setLoading(false);
     }

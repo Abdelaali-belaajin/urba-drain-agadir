@@ -6,7 +6,11 @@ import AdminPanel from '../components/AdminPanel';
 import SimOrage from '../components/SimOrage';
 import PumpControl from '../components/PumpControl';
 import MessagePanel from '../components/MessagePanel';
-import client, { getZones, getAlertes, getPompes, getCapteurs, resolveAlerte as apiResolveAlerte, togglePompe as apiTogglePompe, logout as apiLogout, changePassword } from '../api/client';
+import client, { 
+    getZones, getAlertes, getPompes, getCapteurs, 
+    resolveAlerte as apiResolveAlerte, togglePompe as apiTogglePompe, 
+    logout as apiLogout, changePassword, getMessages 
+} from '../api/client';
 import {
     LayoutDashboard, AlertTriangle, Settings2, ShieldCheck,
     CloudRain, LogOut, Droplets, Menu, Clock, Lock, MessageSquare
@@ -51,7 +55,7 @@ export default function Dashboard({ user: userProp }) {
 
     const fetchData = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
-        // Si on était en erreur, on indique qu'on tente de se reconnecter
+        // Utilisation d'un setter fonctionnel pour éviter la dépendance sur apiStatus
         setApiStatus(prev => prev === 'error' ? 'reconnecting' : prev);
 
         try {
@@ -74,20 +78,18 @@ export default function Dashboard({ user: userProp }) {
         } finally {
             if (!silent) setLoading(false);
         }
-    }, [apiStatus])
+    }, [])
 
-    // Fetch unread messages count
+    // Fetch unread messages count using centralized client
     const fetchUnread = useCallback(async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/messages', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
+            const data = await getMessages();
+            if (Array.isArray(data)) {
                 setUnreadMessages(data.filter(m => !m.lu).length);
             }
-        } catch {}
+        } catch (err) {
+            console.error("Erreur lecture messages non lus", err);
+        }
     }, []);
 
     useEffect(() => {

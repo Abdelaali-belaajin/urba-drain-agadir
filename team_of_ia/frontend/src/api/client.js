@@ -19,7 +19,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response.data,
     (error) => {
-        if (error.response?.status === 401) {
+        const isLoginAttempt = error.config?.url?.endsWith('/login');
+        if (error.response?.status === 401 && !isLoginAttempt) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             localStorage.removeItem('role');
@@ -61,6 +62,12 @@ export const createUser = (data) => api.post('/users', data);
 export const updateUser = (id, data) => api.put(`/users/${id}`, data);
 export const toggleUser = (id) => api.patch(`/users/${id}/toggle`);
 export const deleteUser = (id) => api.delete(`/users/${id}`);
+
+// --- Messages --- prefix: /messages
+export const getMessages = () => api.get('/messages');
+export const getMessageUsers = () => api.get('/messages/users');
+export const markMessageAsRead = (id) => api.put(`/messages/${id}/lire`);
+export const sendMessage = (data) => api.post('/messages', data);
 
 // --- Logs --- prefix: /logs
 export const getLogs = () => api.get('/logs?limit=20');

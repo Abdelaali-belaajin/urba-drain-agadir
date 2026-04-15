@@ -1,5 +1,42 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, Download, Volume2, VolumeX, CheckCircle, AlertTriangle, Info, Bell, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
+const LEVEL_LABELS = {
+    'CRITIQUE':  'CRITIQUE',
+    'CRITICAL':  'CRITIQUE',
+    'EMERGENCY': 'URGENCE',
+    'ÉLEVÉ':     'ÉLEVÉ',
+    'ELEVE':     'ÉLEVÉ',
+    'WARNING':   'ÉLEVÉ',
+    'MOYEN':     'MOYEN',
+    'FAIBLE':    'FAIBLE',
+    'INFO':      'INFO',
+    'RESOLUE':   'RÉSOLUE',
+    'RESOLVED':  'RÉSOLUE',
+};
+
+const getLevelStyle = (level) => {
+    switch(level) {
+        case 'EMERGENCY':
+        case 'CRITICAL':
+        case 'CRITIQUE':
+            return { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' };
+        case 'WARNING':
+        case 'ÉLEVÉ':
+        case 'ELEVE':
+            return { color: '#f97316', bg: 'rgba(249,115,22,0.1)', border: 'rgba(249,115,22,0.2)' };
+        case 'MOYEN':
+            return { color: '#eab308', bg: 'rgba(234,179,8,0.1)', border: 'rgba(234,179,8,0.2)' };
+        case 'FAIBLE':
+            return { color: '#22c55e', bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.2)' };
+        case 'INFO':
+            return { color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.2)' };
+        case 'RESOLUE':
+        case 'RESOLVED':
+            return { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)' };
+        default: 
+            return { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)' };
+    }
+};
 
 export default function AlertPanel({ alertes, onResolve, onRefresh }) {
     const [search, setSearch]         = useState('');
@@ -116,43 +153,7 @@ export default function AlertPanel({ alertes, onResolve, onRefresh }) {
         document.body.removeChild(link);
     };
 
-    const LEVEL_LABELS = {
-        'CRITIQUE':  'CRITIQUE',
-        'CRITICAL':  'CRITIQUE',
-        'EMERGENCY': 'URGENCE',
-        'ÉLEVÉ':     'ÉLEVÉ',
-        'ELEVE':     'ÉLEVÉ',
-        'WARNING':   'ÉLEVÉ',
-        'MOYEN':     'MOYEN',
-        'FAIBLE':    'FAIBLE',
-        'INFO':      'INFO',
-        'RESOLUE':   'RÉSOLUE',
-        'RESOLVED':  'RÉSOLUE',
-    };
 
-    const getLevelStyle = (level) => {
-        switch(level) {
-            case 'EMERGENCY':
-            case 'CRITICAL':
-            case 'CRITIQUE':
-                return { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' };
-            case 'WARNING':
-            case 'ÉLEVÉ':
-            case 'ELEVE':
-                return { color: '#f97316', bg: 'rgba(249,115,22,0.1)', border: 'rgba(249,115,22,0.2)' };
-            case 'MOYEN':
-                return { color: '#eab308', bg: 'rgba(234,179,8,0.1)', border: 'rgba(234,179,8,0.2)' };
-            case 'FAIBLE':
-                return { color: '#22c55e', bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.2)' };
-            case 'INFO':
-                return { color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.2)' };
-            case 'RESOLUE':
-            case 'RESOLVED':
-                return { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)' };
-            default: 
-                return { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)' };
-        }
-    };
 
     return (
         <div style={{

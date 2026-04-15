@@ -49,34 +49,46 @@ BEGIN
         END IF;
 
         IF v_capteur_id IS NOT NULL THEN
-            -- Calculer la valeur simulée
-            -- Formule : seuil_critique × (1 + intensité/100)
-            SET v_valeur_sim = v_seuil_critique * (1 + (p_intensite_mm_h / 100));
+            BEGIN
+                DECLARE v_current_taux DECIMAL(5,2);
+                
+                -- 1. Récupérer le taux actuel
+                SELECT b.taux_remplissage INTO v_current_taux 
+                FROM BOUCHE_EGOUT b 
+                JOIN CAPTEUR c ON c.bouche_id = b.bouche_id 
+                WHERE c.capteur_id = v_capteur_id LIMIT 1;
+                
+                SET v_current_taux = IFNULL(v_current_taux, 0);
+                
+                -- 2. Ajouter l'impact de la pluie (approx. 0.8% par mm/h)
+                SET v_current_taux = LEAST(v_current_taux + (p_intensite_mm_h * 0.8), 100.0);
+                
+                -- 3. Mettre à jour la bouche D'ABORD
+                UPDATE BOUCHE_EGOUT b
+                JOIN CAPTEUR c ON c.bouche_id = b.bouche_id
+                SET b.taux_remplissage = v_current_taux
+                WHERE c.capteur_id = v_capteur_id;
 
-            -- Insérer la mesure simulée (déclenchera trg_creation_alerte)
-            INSERT INTO MESURE (
-                capteur_id, valeur, unite,
-                date_heure, qualite_signal, anomalie, note
-            ) VALUES (
-                v_capteur_id,
-                v_valeur_sim,
-                IFNULL(v_unite, 'mm/h'),
-                NOW(),
-                'BONNE',
-                FALSE,
-                CONCAT('SIMULATION ORAGE — intensite=', p_intensite_mm_h, 'mm/h')
-            );
+                -- 4. Aligner PARFAITEMENT la valeur du capteur sur le taux de remplissage
+                -- (On sait que 85% de remplissage = seuil_critique selon la logique du système)
+                SET v_valeur_sim = (v_seuil_critique / 85.0) * v_current_taux;
 
-            SET v_nb_alertes = v_nb_alertes + 1;
+                -- 5. Insérer la mesure simulée (déclenchera trg_creation_alerte)
+                INSERT INTO MESURE (
+                    capteur_id, valeur, unite,
+                    date_heure, qualite_signal, anomalie, note
+                ) VALUES (
+                    v_capteur_id,
+                    v_valeur_sim,
+                    IFNULL(v_unite, 'mm/h'),
+                    NOW(),
+                    'BONNE',
+                    FALSE,
+                    CONCAT('SIMULATION ORAGE — intensite=', p_intensite_mm_h, 'mm/h. Calc: ', v_current_taux, '%')
+                );
 
-            -- Mettre à jour le taux de remplissage des bouches
-            UPDATE BOUCHE_EGOUT b
-            JOIN   CAPTEUR c ON c.bouche_id = b.bouche_id
-            SET    b.taux_remplissage = LEAST(
-                       b.taux_remplissage + (p_intensite_mm_h * 0.8),
-                       100.0
-                   )
-            WHERE  c.capteur_id = v_capteur_id;
+                SET v_nb_alertes = v_nb_alertes + 1;
+            END;
         END IF;
 
     END LOOP boucle_capteurs;

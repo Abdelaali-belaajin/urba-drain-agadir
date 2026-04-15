@@ -20,8 +20,8 @@ class Alerte(db.Model):
     def to_dict(self):
         # Dynamic level logic:
         # 1. If resolved -> "RESOLUE"
-        # 2. If active -> Current risk level of the zone
-        display_level = "RESOLUE" if self.resolue else (str(self.zone.niveau_risque) if self.zone else str(self.niveau_alerte))
+        # 2. If active -> Current risk level of the alert
+        display_level = "RESOLUE" if self.resolue else str(self.niveau_alerte)
 
         return {
             "alerte_id":           self.alerte_id,
